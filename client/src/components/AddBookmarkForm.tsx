@@ -49,7 +49,19 @@ export default function AddBookmarkForm() {
   };
   
   const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Create tag on Enter key
     if (e.key === "Enter" && newTag.trim()) {
+      e.preventDefault();
+      
+      if (!tags.includes(newTag.trim())) {
+        setTags([...tags, newTag.trim()]);
+      }
+      
+      setNewTag("");
+    }
+    
+    // Create tag on space or comma
+    if ((e.key === " " || e.key === ",") && newTag.trim()) {
       e.preventDefault();
       
       if (!tags.includes(newTag.trim())) {
@@ -179,7 +191,7 @@ export default function AddBookmarkForm() {
               id="tag-input"
               type="text" 
               className="flex-1 py-1 px-2 border-b-2 border-black focus:outline-none" 
-              placeholder="Add tags and press Enter" 
+              placeholder="Add tags (Enter, space or comma to separate)" 
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
               onKeyDown={handleTagInput}
