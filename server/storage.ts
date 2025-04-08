@@ -7,6 +7,8 @@ import {
   type InsertBookmark,
   type UpdateBookmark
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 
 // Storage interface
 export interface IStorage {
@@ -23,82 +25,56 @@ export interface IStorage {
   deleteBookmark(id: number): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private bookmarksMap: Map<number, Bookmark>;
-  userCurrentId: number;
-  bookmarkCurrentId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.bookmarksMap = new Map();
-    this.userCurrentId = 1;
-    this.bookmarkCurrentId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userCurrentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   // Bookmark methods
   async createBookmark(insertBookmark: InsertBookmark): Promise<Bookmark> {
-    const id = this.bookmarkCurrentId++;
-    const createdAt = new Date();
-    
-    const bookmark: Bookmark = { 
-      ...insertBookmark, 
-      id, 
-      createdAt 
-    };
-    
-    this.bookmarksMap.set(id, bookmark);
+    const [bookmark] = await db.insert(bookmarks).values(insertBookmark).returning();
     return bookmark;
   }
 
   async getBookmarks(): Promise<Bookmark[]> {
-    return Array.from(this.bookmarksMap.values()).sort((a, b) => {
-      // Sort by creation date (newest first)
-      return b.createdAt.getTime() - a.createdAt.getTime();
-    });
+    return await db.select().from(bookmarks).orderBy(desc(bookmarks.createdAt));
   }
 
   async getBookmarkById(id: number): Promise<Bookmark | undefined> {
-    return this.bookmarksMap.get(id);
+    const [bookmark] = await db.select().from(bookmarks).where(eq(bookmarks.id, id));
+    return bookmark;
   }
 
   async updateBookmark(id: number, updateData: UpdateBookmark): Promise<Bookmark | undefined> {
-    const bookmark = this.bookmarksMap.get(id);
+    const [updatedBookmark] = await db
+      .update(bookmarks)
+      .set(updateData)
+      .where(eq(bookmarks.id, id))
+      .returning();
     
-    if (!bookmark) {
-      return undefined;
-    }
-    
-    const updatedBookmark: Bookmark = {
-      ...bookmark,
-      ...updateData,
-    };
-    
-    this.bookmarksMap.set(id, updatedBookmark);
     return updatedBookmark;
   }
 
   async deleteBookmark(id: number): Promise<boolean> {
-    return this.bookmarksMap.delete(id);
+    const [deletedBookmark] = await db
+      .delete(bookmarks)
+      .where(eq(bookmarks.id, id))
+      .returning();
+    
+    return !!deletedBookmark;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
