@@ -7,8 +7,13 @@ import {
   type InsertBookmark,
   type UpdateBookmark
 } from "@shared/schema";
+import session from "express-session";
+import createMemoryStore from "memorystore";
 
 // Storage interface
+
+const MemoryStore = createMemoryStore(session);
+
 export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
@@ -21,6 +26,9 @@ export interface IStorage {
   getBookmarkById(id: number): Promise<Bookmark | undefined>;
   updateBookmark(id: number, bookmark: UpdateBookmark): Promise<Bookmark | undefined>;
   deleteBookmark(id: number): Promise<boolean>;
+  
+  // Session store
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -28,12 +36,16 @@ export class MemStorage implements IStorage {
   private bookmarksMap: Map<number, Bookmark>;
   userCurrentId: number;
   bookmarkCurrentId: number;
+  sessionStore: session.Store;
 
   constructor() {
     this.users = new Map();
     this.bookmarksMap = new Map();
     this.userCurrentId = 1;
     this.bookmarkCurrentId = 1;
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // Prune expired entries every 24h
+    });
   }
 
   // User methods
@@ -59,10 +71,15 @@ export class MemStorage implements IStorage {
     const id = this.bookmarkCurrentId++;
     const createdAt = new Date();
     
+    // Make sure description and favicon are null instead of undefined
     const bookmark: Bookmark = { 
       ...insertBookmark, 
       id, 
-      createdAt 
+      createdAt,
+      description: insertBookmark.description ?? null,
+      favicon: insertBookmark.favicon ?? null,
+      tags: insertBookmark.tags ?? null,
+      metadata: insertBookmark.metadata ?? null
     };
     
     this.bookmarksMap.set(id, bookmark);

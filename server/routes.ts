@@ -5,10 +5,21 @@ import { extractMetadata } from "./utils/metadataExtractor";
 import { insertBookmarkSchema, updateBookmarkSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
+  
+  // Middleware to check if user is authenticated for bookmark routes
+  const ensureAuthenticated = (req: any, res: any, next: any) => {
+    if (req.isAuthenticated()) {
+      return next();
+    }
+    return res.status(401).json({ message: "User not authenticated" });
+  };
   // API routes
-  app.get("/api/bookmarks", async (req, res) => {
+  app.get("/api/bookmarks", ensureAuthenticated, async (req, res) => {
     try {
       const bookmarks = await storage.getBookmarks();
       res.json(bookmarks);
@@ -18,7 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/bookmarks/:id", async (req, res) => {
+  app.get("/api/bookmarks/:id", ensureAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -39,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/bookmarks", async (req, res) => {
+  app.post("/api/bookmarks", ensureAuthenticated, async (req, res) => {
     try {
       const validatedData = insertBookmarkSchema.parse(req.body);
       const bookmark = await storage.createBookmark(validatedData);
@@ -55,7 +66,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/bookmarks/:id", async (req, res) => {
+  app.put("/api/bookmarks/:id", ensureAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -82,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/bookmarks/:id", async (req, res) => {
+  app.delete("/api/bookmarks/:id", ensureAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -103,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/extract-metadata", async (req, res) => {
+  app.post("/api/extract-metadata", ensureAuthenticated, async (req, res) => {
     try {
       const { url } = req.body;
       
