@@ -1,0 +1,64 @@
+/* Neo-brutalism specific styles */
+.neo-brutal-box {
+  border: 3px solid black;
+  box-shadow: 5px 5px 0px 0px rgba(0,0,0,1);
+  transition: all 0.2s ease-in-out;
+}
+
+.neo-brutal-box:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0px 0px rgba(0,0,0,1);
+}
+
+.neo-brutal-box-lg {
+  border: 3px solid black;
+  box-shadow: 8px 8px 0px 0px rgba(0,0,0,1);
+  transition: all 0.2s ease-in-out;
+}
+
+.neo-brutal-box-lg:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 11px 11px 0px 0px rgba(0,0,0,1);
+}
+
+.tag-pill {
+  border: 2px solid black;
+  transition: all 0.15s ease-in-out;
+}
+
+.tag-pill:hover {
+  transform: translateY(-2px);
+}
+
+.bookmark-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.bookmark-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 8px 8px 0px 0px rgba(0,0,0,1);
+}
+
+.active-tag {
+  background-color: black;
+  color: white;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: white;
+  border-left: 2px solid black;
+}
+
+::-webkit-scrollbar-thumb {
+  background: black;
+  border: 2px solid black;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
