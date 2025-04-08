@@ -1,68 +1,80 @@
 import { useState, useMemo } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import BookmarkCard from "./BookmarkCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBookmarks } from "@/hooks/useBookmarks";
+import { SearchBar } from "./SearchBar";
+import { TagFilter } from "./TagFilter";
+import { ImportExport } from "./ImportExport";
+import { SortOptions, type SortField, type SortOrder } from "./SortOptions";
+import { InsertBookmark, Bookmark } from "@shared/schema";
+import { queryClient } from "@/lib/queryClient";
 
 export default function BookmarkManager() {
-  const { bookmarks, isLoading, updateBookmark, deleteBookmark } = useBookmarks();
+  const { 
+    bookmarks, 
+    isLoading, 
+    updateBookmark, 
+    deleteBookmark, 
+    addBookmark, 
+    queryClient 
+  } = useBookmarks();
   
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTag, setActiveTag] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortOption, setSortOption] = useState("newest");
-  const [showFilter, setShowFilter] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   
   const ITEMS_PER_PAGE = 6;
-  
-  // Get unique tags from all bookmarks
-  const uniqueTags = useMemo(() => {
-    const allTags = bookmarks.flatMap(bookmark => bookmark.tags || []);
-    return [...new Set(allTags)];
-  }, [bookmarks]);
   
   // Filter and sort bookmarks
   const filteredBookmarks = useMemo(() => {
     let result = [...bookmarks];
     
-    // Filter by tag
-    if (activeTag !== "All") {
+    // Filter by selected tags
+    if (selectedTags.length > 0) {
       result = result.filter(bookmark => 
-        bookmark.tags && bookmark.tags.includes(activeTag)
+        bookmark.tags ? selectedTags.every(tag => bookmark.tags.includes(tag)) : false
       );
     }
     
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    // Filter by search term
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
       result = result.filter(bookmark => 
-        bookmark.title.toLowerCase().includes(query) || 
-        (bookmark.description && bookmark.description.toLowerCase().includes(query)) ||
-        (bookmark.tags && bookmark.tags.some(tag => tag.toLowerCase().includes(query)))
+        bookmark.title.toLowerCase().includes(term) || 
+        (bookmark.description && bookmark.description.toLowerCase().includes(term)) ||
+        bookmark.url.toLowerCase().includes(term) ||
+        (bookmark.tags && bookmark.tags.some(tag => tag.toLowerCase().includes(term)))
       );
     }
     
     // Sort bookmarks
-    switch (sortOption) {
-      case "oldest":
-        result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        break;
-      case "az":
-        result.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case "za":
-        result.sort((a, b) => b.title.localeCompare(a.title));
-        break;
-      case "newest":
-      default:
-        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        break;
-    }
+    result.sort((a, b) => {
+      let valueA, valueB;
+      
+      // Extract values based on sort field
+      if (sortField === "createdAt") {
+        valueA = new Date(a.createdAt).getTime();
+        valueB = new Date(b.createdAt).getTime();
+      } else if (sortField === "title") {
+        valueA = a.title.toLowerCase();
+        valueB = b.title.toLowerCase();
+      } else {
+        valueA = a.url.toLowerCase();
+        valueB = b.url.toLowerCase();
+      }
+      
+      // Apply sort order
+      return sortOrder === "asc" 
+        ? (valueA > valueB ? 1 : -1)
+        : (valueA < valueB ? 1 : -1);
+    });
     
     return result;
-  }, [bookmarks, activeTag, searchQuery, sortOption]);
+  }, [bookmarks, selectedTags, searchTerm, sortField, sortOrder]);
   
   // Pagination
   const totalPages = Math.ceil(filteredBookmarks.length / ITEMS_PER_PAGE);
@@ -71,13 +83,31 @@ export default function BookmarkManager() {
     return filteredBookmarks.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredBookmarks, currentPage]);
   
-  const handleSearch = () => {
-    setCurrentPage(1); // Reset to first page on new search
+  const handleSearchChange = (term: string) => {
+    setSearchTerm(term);
+    setCurrentPage(1); // Reset to first page on search change
   };
   
-  const handleFilterByTag = (tag: string) => {
-    setActiveTag(tag);
-    setCurrentPage(1); // Reset to first page on tag change
+  const handleTagSelect = (tag: string) => {
+    if (!selectedTags.includes(tag)) {
+      setSelectedTags([...selectedTags, tag]);
+      setCurrentPage(1); // Reset to first page on tag change
+    }
+  };
+  
+  const handleTagClear = (tag: string) => {
+    setSelectedTags(selectedTags.filter(t => t !== tag));
+    setCurrentPage(1);
+  };
+  
+  const handleClearAllTags = () => {
+    setSelectedTags([]);
+    setCurrentPage(1);
+  };
+  
+  const handleSort = (field: SortField, order: SortOrder) => {
+    setSortField(field);
+    setSortOrder(order);
   };
   
   const handleUpdateBookmark = (id: number, data: { title: string; description: string; tags: string[] }) => {
@@ -88,96 +118,54 @@ export default function BookmarkManager() {
     deleteBookmark(id);
   };
   
+  const handleImportBookmarks = async (importedBookmarks: InsertBookmark[]) => {
+    // Process the imported bookmarks one by one
+    for (const bookmark of importedBookmarks) {
+      await addBookmark(bookmark);
+    }
+    
+    // Refresh the bookmarks list
+    queryClient.invalidateQueries({ queryKey: ['/api/bookmarks'] });
+  };
+  
   return (
     <div className="mt-12">
       <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
         <h2 className="text-2xl md:text-3xl font-space font-bold">Your Bookmarks</h2>
         
-        {/* Search & Filter Bar */}
-        <div className="flex items-center flex-wrap gap-2">
-          <div className="neo-brutal-box bg-white overflow-hidden flex">
-            <Input
-              type="text" 
-              className="p-2 w-40 sm:w-60 focus:outline-none border-none" 
-              placeholder="Search bookmarks" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
-            <Button 
-              className="bg-black text-white px-3 rounded-none hover:bg-black/90"
-              onClick={handleSearch}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-          </div>
-          
-          {/* Filter dropdown */}
-          <div className="relative neo-brutal-box">
-            <Button 
-              className="flex items-center px-3 py-2 bg-secondary font-medium hover:bg-secondary/90 rounded-none"
-              onClick={() => setShowFilter(!showFilter)}
-            >
-              <span>Filter</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </Button>
-            {showFilter && (
-              <div className="absolute right-0 mt-2 w-48 bg-white neo-brutal-box z-10">
-                <div className="py-1">
-                  <a 
-                    href="#" 
-                    className={`block px-4 py-2 hover:bg-gray-100 ${sortOption === 'newest' ? 'font-bold' : ''}`}
-                    onClick={(e) => { e.preventDefault(); setSortOption('newest'); setShowFilter(false); }}
-                  >
-                    Newest First
-                  </a>
-                  <a 
-                    href="#" 
-                    className={`block px-4 py-2 hover:bg-gray-100 ${sortOption === 'oldest' ? 'font-bold' : ''}`}
-                    onClick={(e) => { e.preventDefault(); setSortOption('oldest'); setShowFilter(false); }}
-                  >
-                    Oldest First
-                  </a>
-                  <a 
-                    href="#" 
-                    className={`block px-4 py-2 hover:bg-gray-100 ${sortOption === 'az' ? 'font-bold' : ''}`}
-                    onClick={(e) => { e.preventDefault(); setSortOption('az'); setShowFilter(false); }}
-                  >
-                    Alphabetical (A-Z)
-                  </a>
-                  <a 
-                    href="#" 
-                    className={`block px-4 py-2 hover:bg-gray-100 ${sortOption === 'za' ? 'font-bold' : ''}`}
-                    onClick={(e) => { e.preventDefault(); setSortOption('za'); setShowFilter(false); }}
-                  >
-                    Alphabetical (Z-A)
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Import/Export controls */}
+        <ImportExport 
+          bookmarks={bookmarks} 
+          onImport={handleImportBookmarks} 
+        />
       </div>
       
-      {/* Tags Filter */}
-      <div className="mb-8 flex flex-wrap gap-2">
-        <button 
-          className={`tag-pill px-4 py-1 ${activeTag === 'All' ? 'active-tag' : 'bg-white'}`}
-          onClick={() => handleFilterByTag('All')}
-        >
-          All
-        </button>
-        {uniqueTags.map((tag, index) => (
-          <button 
-            key={index} 
-            className={`tag-pill px-4 py-1 ${activeTag === tag ? 'active-tag' : 'bg-white'}`}
-            onClick={() => handleFilterByTag(tag)}
-          >
-            {tag}
-          </button>
-        ))}
+      {/* Search bar */}
+      <SearchBar 
+        searchTerm={searchTerm} 
+        onSearchChange={handleSearchChange} 
+      />
+      
+      <div className="flex flex-col md:flex-row gap-6 mb-6">
+        {/* Sort options */}
+        <div className="flex-1">
+          <SortOptions 
+            sortField={sortField} 
+            sortOrder={sortOrder} 
+            onSort={handleSort} 
+          />
+        </div>
+        
+        {/* Tag filter */}
+        <div className="flex-1">
+          <TagFilter 
+            bookmarks={bookmarks}
+            selectedTags={selectedTags}
+            onTagSelect={handleTagSelect}
+            onTagClear={handleTagClear}
+            onClearAllTags={handleClearAllTags}
+          />
+        </div>
       </div>
       
       {/* Bookmarks Grid */}
@@ -219,7 +207,7 @@ export default function BookmarkManager() {
         <div className="text-center py-12 neo-brutal-box bg-white">
           <h3 className="text-xl font-space font-bold mb-2">No bookmarks found</h3>
           <p className="text-gray-600">
-            {searchQuery || activeTag !== 'All' 
+            {searchTerm || selectedTags.length > 0
               ? "Try changing your search or filter settings" 
               : "Add your first bookmark using the form above"}
           </p>

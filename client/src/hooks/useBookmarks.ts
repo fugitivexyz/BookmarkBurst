@@ -99,5 +99,6 @@ export function useBookmarks() {
     isAdding: addBookmarkMutation.isPending,
     isUpdating: updateBookmarkMutation.isPending,
     isDeleting: deleteBookmarkMutation.isPending,
+    queryClient, // Expose queryClient for invalidation
   };
 }
