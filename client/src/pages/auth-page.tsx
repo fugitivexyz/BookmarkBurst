@@ -9,7 +9,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
-import { Loader2, Mail, AlertCircle, BookmarkIcon } from "lucide-react";
+import { Loader2, Mail, AlertCircle, BookmarkIcon, TagIcon, Search, RefreshCw, Smartphone } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
 
@@ -105,19 +105,19 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-[#f8f3e8]">
       {/* Left section with forms */}
       <div className="flex flex-col justify-center w-full md:w-1/2 p-4 md:p-8">
         <div className="mx-auto w-full max-w-md space-y-6">
           <div className="space-y-2 text-center">
-            <h1 className="text-3xl font-bold">BookmarkBurst</h1>
-            <p className="text-gray-500 dark:text-gray-400">
+            <h1 className="text-4xl font-bold">Bookmarko</h1>
+            <p className="text-gray-700">
               Login or create an account to manage your bookmarks
             </p>
           </div>
           
           {emailVerificationSent && (
-            <Alert className="mb-4">
+            <Alert className="mb-4 neo-brutal-box">
               <Mail className="h-4 w-4" />
               <AlertTitle>Verification Email Sent</AlertTitle>
               <AlertDescription>
@@ -128,7 +128,7 @@ export default function AuthPage() {
           )}
           
           {loginMutation.isError && (
-            <Alert variant="destructive" className="mb-4">
+            <Alert variant="destructive" className="mb-4 neo-brutal-box">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Authentication Error</AlertTitle>
               <AlertDescription>
@@ -137,186 +137,245 @@ export default function AuthPage() {
             </Alert>
           )}
 
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
-            
-            {/* Login Form */}
-            <TabsContent value="login">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Login</CardTitle>
-                  <CardDescription>
-                    Enter your email and password to access your bookmarks
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Form {...loginForm}>
-                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                      <FormField
-                        control={loginForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="Enter your email" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={loginForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input type="password" placeholder="Enter your password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
-                        disabled={loginMutation.isPending}
-                      >
-                        {loginMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Logging in...
-                          </>
-                        ) : (
-                          "Login"
-                        )}
-                      </Button>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            {/* Registration Form */}
-            <TabsContent value="register">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Create an account</CardTitle>
-                  <CardDescription>
-                    Enter your details to create a new account
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Form {...registerForm}>
-                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                      <FormField
-                        control={registerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="Enter your email" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+          <div className="border-3 border-black">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 p-0 rounded-none h-auto bg-white">
+                <TabsTrigger 
+                  value="login" 
+                  className="py-3 border-r-3 border-black rounded-none data-[state=active]:bg-black data-[state=active]:text-white"
+                >
+                  Login
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="register" 
+                  className="py-3 rounded-none data-[state=active]:bg-black data-[state=active]:text-white"
+                >
+                  Register
+                </TabsTrigger>
+              </TabsList>
+              
+              {/* Login Form */}
+              <TabsContent value="login" className="border-t-3 border-black mt-0 p-4">
+                <h2 className="font-bold text-xl mb-2">Login</h2>
+                <p className="text-gray-600 mb-4 text-sm">
+                  Enter your email and password to access your bookmarks
+                </p>
+                
+                <Form {...loginForm}>
+                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                    <FormField
+                      control={loginForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="email" 
+                              placeholder="Enter your email" 
+                              {...field} 
+                              className="border-3 border-black focus-visible:ring-0 focus-visible:ring-offset-0" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     
-                      <FormField
-                        control={registerForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Username</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Choose a username" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={registerForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input type="password" placeholder="Create a password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={registerForm.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Confirm Password</FormLabel>
-                            <FormControl>
-                              <Input type="password" placeholder="Confirm your password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
-                        disabled={registerMutation.isPending}
-                      >
-                        {registerMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Creating account...
-                          </>
-                        ) : (
-                          "Register"
-                        )}
-                      </Button>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                    <FormField
+                      control={loginForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="password" 
+                              placeholder="Enter your password" 
+                              {...field} 
+                              className="border-3 border-black focus-visible:ring-0 focus-visible:ring-offset-0" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-[#ff5050] text-black hover:bg-[#ff5050]/90 border-3 border-black" 
+                      disabled={loginMutation.isPending}
+                    >
+                      {loginMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Logging in...
+                        </>
+                      ) : (
+                        "Login"
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+              
+              {/* Registration Form */}
+              <TabsContent value="register" className="border-t-3 border-black mt-0 p-4">
+                <h2 className="font-bold text-xl mb-2">Create an account</h2>
+                <p className="text-gray-600 mb-4 text-sm">
+                  Enter your details to create a new account
+                </p>
+                
+                <Form {...registerForm}>
+                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                    <FormField
+                      control={registerForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="email" 
+                              placeholder="Enter your email" 
+                              {...field} 
+                              className="border-3 border-black focus-visible:ring-0 focus-visible:ring-offset-0" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  
+                    <FormField
+                      control={registerForm.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Choose a username" 
+                              {...field} 
+                              className="border-3 border-black focus-visible:ring-0 focus-visible:ring-offset-0" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="password" 
+                              placeholder="Create a password" 
+                              {...field} 
+                              className="border-3 border-black focus-visible:ring-0 focus-visible:ring-offset-0" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm Password</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="password" 
+                              placeholder="Confirm your password" 
+                              {...field} 
+                              className="border-3 border-black focus-visible:ring-0 focus-visible:ring-offset-0" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-[#ff5050] text-black hover:bg-[#ff5050]/90 border-3 border-black" 
+                      disabled={registerMutation.isPending}
+                    >
+                      {registerMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating account...
+                        </>
+                      ) : (
+                        "Register"
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
       </div>
       
       {/* Right section hero */}
-      <div className="hidden md:flex md:w-1/2 bg-primary-100 dark:bg-primary-950 flex-col justify-center items-center p-8">
-        <div className="max-w-md text-center space-y-6">
-          <h1 className="text-4xl font-bold">Organize Your Web</h1>
-          <p className="text-xl">
-            Keep your favorite websites organized with our powerful bookmark manager. Save, tag, and find your bookmarks easily.
-          </p>
-          <div className="grid grid-cols-2 gap-4 mt-8">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg text-center">
-              <h3 className="font-bold mb-2">Smart Tags</h3>
-              <p>Organize with custom tags for easy filtering</p>
+      <div className="hidden md:flex md:w-1/2 bg-[#f8f3e8] flex-col justify-center items-center p-8">
+        <div className="max-w-md space-y-8">
+          <div className="text-center">
+            <h1 className="text-5xl font-bold mb-4">Organize Your Web</h1>
+            <p className="text-xl">
+              Keep your favorite websites organized with our powerful bookmark manager. Save, tag, and find your bookmarks easily.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="neo-brutal-box bg-white p-4 text-center">
+              <div className="flex justify-center mb-2">
+                <TagIcon className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold mb-1">Smart Tags</h3>
+              <p className="text-sm">Organize with custom filters</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg text-center">
-              <h3 className="font-bold mb-2">Auto Metadata</h3>
-              <p>Automatically extracts titles and descriptions</p>
+            
+            <div className="neo-brutal-box bg-white p-4 text-center">
+              <div className="flex justify-center mb-2">
+                <BookmarkIcon className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold mb-1">Auto Metadata</h3>
+              <p className="text-sm">Titles and descriptions generated</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg text-center">
-              <h3 className="font-bold mb-2">Search</h3>
-              <p>Find your bookmarks instantly with powerful search</p>
+            
+            <div className="neo-brutal-box bg-white p-4 text-center">
+              <div className="flex justify-center mb-2">
+                <Search className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold mb-1">Search</h3>
+              <p className="text-sm">Find your bookmarks instantly</p>
             </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg text-center">
-              <h3 className="font-bold mb-2">Cross-Platform</h3>
-              <p>Access your bookmarks from any device</p>
+            
+            <div className="neo-brutal-box bg-white p-4 text-center">
+              <div className="flex justify-center mb-2">
+                <Smartphone className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold mb-1">Cross-Platform</h3>
+              <p className="text-sm">Access from any device</p>
+            </div>
+          </div>
+          
+          <div className="flex justify-center">
+            <div className="neo-brutal-box bg-[#b8a6ff] p-6 pt-8 w-full max-w-md relative">
+              <div className="absolute -top-4 -right-4 bg-[#ffcb45] neo-brutal-box p-3 transform rotate-12">
+                <BookmarkIcon className="h-8 w-8 transform -rotate-12" />
+              </div>
+              <div className="text-2xl font-bold mb-2">BOOKMARKO</div>
+              <p className="mb-0">Save links. Tag them. Search instantly.</p>
             </div>
           </div>
         </div>
