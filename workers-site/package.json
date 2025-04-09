@@ -1,0 +1,9 @@
+{
+  "name": "bookmarkburst-workers-site",
+  "version": "1.0.0",
+  "description": "Worker script for BookmarkBurst Pages deployment",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudflare/kv-asset-handler": "^0.3.0"
+  }
+} 

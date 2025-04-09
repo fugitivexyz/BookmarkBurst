@@ -1,5 +1,9 @@
 name = "bookmarkburst"
 compatibility_date = "2025-04-09"
 
+# Configure for Cloudflare Pages deployment
 [site]
-bucket = "./client/dist" 
+bucket = "client/dist"
+
+# Specify the main file for Pages
+main = "./client/dist/index.html" 
