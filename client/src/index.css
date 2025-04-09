@@ -80,4 +80,13 @@
     transform: none !important;
     animation: none !important;
   }
+  
+  /* Dialog specific overrides */
+  .neo-brutal-box.no-transitions {
+    border: 2px solid black !important;
+    border-radius: 0 !important;
+    box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1) !important;
+    max-height: calc(100vh - 4rem) !important;
+    overflow-y: auto !important;
+  }
 }
