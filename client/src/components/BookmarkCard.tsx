@@ -257,7 +257,7 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel 
-              className="neo-brutal-box no-transitions"
+              className="neo-brutal-box no-transitions w-full sm:w-auto mb-2 sm:mb-0"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsDeleteDialogOpen(false);
@@ -270,7 +270,7 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
                 e.stopPropagation();
                 handleDeleteConfirm();
               }}
-              className="neo-brutal-box no-transitions bg-red-500 text-white"
+              className="neo-brutal-box no-transitions bg-red-500 text-white w-full sm:w-auto"
             >
               Delete
             </AlertDialogAction>
