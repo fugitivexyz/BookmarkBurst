@@ -1,8 +1,2 @@
 name = "bookmarkburst"
 compatibility_date = "2025-04-09"
-main = "workers-site/index.js"
-
-# Configure the Assets binding
-[assets]
-directory = "./client/dist"
-binding = "ASSETS" 
