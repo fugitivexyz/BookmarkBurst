@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -10,12 +11,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AccountInfoDialog } from "@/components/AccountInfoDialog";
 
 export default function Header() {
   const { user, logoutMutation } = useAuth();
+  const [accountInfoOpen, setAccountInfoOpen] = useState(false);
 
   const handleLogout = () => {
     logoutMutation.mutate();
+  };
+
+  const handleMyAccountClick = () => {
+    setAccountInfoOpen(true);
   };
 
   return (
@@ -28,22 +35,33 @@ export default function Header() {
 
         <div className="flex items-center gap-4">
           {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2 text-white hover:bg-primary/90">
-                  <User className="h-4 w-4" />
-                  {user.username}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="gap-2 cursor-pointer">
-                  <LogOut className="h-4 w-4" />
-                  <span>Logout</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 text-white hover:bg-primary/90">
+                    <User className="h-4 w-4" />
+                    {user.username}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleMyAccountClick} className="gap-2 cursor-pointer">
+                    <User className="h-4 w-4" />
+                    <span>Account Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="gap-2 cursor-pointer">
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <AccountInfoDialog
+                open={accountInfoOpen}
+                onOpenChange={setAccountInfoOpen}
+              />
+            </>
           )}
 
           {!user && (
