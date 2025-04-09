@@ -110,7 +110,7 @@ export function AccountInfoDialog({ open, onOpenChange }: AccountInfoDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="w-full max-w-md">
         <DialogHeader>
           <DialogTitle>Account Information</DialogTitle>
           <DialogDescription>
@@ -121,11 +121,11 @@ export function AccountInfoDialog({ open, onOpenChange }: AccountInfoDialogProps
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <div className="font-medium text-right">Username</div>
-            <div className="col-span-3">{user?.username}</div>
+            <div className="col-span-3 break-all">{user?.username}</div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <div className="font-medium text-right">Email</div>
-            <div className="col-span-3">{session?.user.email}</div>
+            <div className="col-span-3 break-all">{session?.user.email}</div>
           </div>
         </div>
 
@@ -234,7 +234,7 @@ export function AccountInfoDialog({ open, onOpenChange }: AccountInfoDialogProps
                     </FormItem>
                   )}
                 />
-                <div className="flex flex-row gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button 
                     type="button" 
                     variant="outline" 
@@ -263,8 +263,8 @@ export function AccountInfoDialog({ open, onOpenChange }: AccountInfoDialogProps
           </div>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="mt-4 sm:mt-6">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
             Close
           </Button>
         </DialogFooter>

@@ -83,12 +83,18 @@
   
   /* Dialog improvements */
   .DialogContent {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) !important;
     max-width: 500px;
     width: 90%;
     max-height: 85vh;
     overflow-y: auto;
     box-sizing: border-box;
     gap: 1rem;
+    margin: 0;
+    padding: 1.5rem;
   }
 
   .DialogContent h2 {
@@ -112,6 +118,7 @@
     .DialogContent {
       width: 95vw;
       padding: 1rem;
+      max-height: 80vh;
     }
     
     .DialogFooter {
