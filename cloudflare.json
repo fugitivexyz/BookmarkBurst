@@ -1,6 +1,9 @@
 {
+  "version": 1,
+  "name": "bookmarkburst",
   "build": {
     "command": "cd client && npm install && npm run build",
-    "output_directory": "client/dist"
+    "output_directory": "./client/dist",
+    "root_directory": "./"
   }
 } 

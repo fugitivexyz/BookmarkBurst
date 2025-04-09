@@ -4,7 +4,7 @@ main = "workers-site/index.js"
 
 # Configure for Cloudflare Pages deployment
 [site]
-bucket = "client/dist"
+bucket = "./dist"
 
 # Specify the main file for Pages
 main = "./client/dist/index.html" 
