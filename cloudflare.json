@@ -3,5 +3,8 @@
   "build": {
     "command": "cd client && npm install && npm run build",
     "output_directory": "./client/dist"
+  },
+  "deploy": {
+    "command": "npx wrangler deploy"
   }
 } 

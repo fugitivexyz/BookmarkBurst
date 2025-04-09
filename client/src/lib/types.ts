@@ -8,4 +8,5 @@ export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type User = {
   id: string;
   username: string;
+  email: string;
 }; 
