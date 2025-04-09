@@ -36,91 +36,62 @@ export function useBookmarks() {
 
   const extractMetadata = async (url: string) => {
     try {
-      console.log("Attempting to extract metadata via Cloudflare Function");
-      
-      // The URL will depend on the environment
-      const functionUrl = import.meta.env.DEV 
-        ? 'http://localhost:8788/extract-metadata' // Local Wrangler development URL
-        : '/extract-metadata'; // Production Cloudflare Pages URL (relative to origin)
-      
-      // Call the Cloudflare Function for metadata extraction
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ url })
+      console.log("Attempting to use Supabase Edge Function for metadata");
+      const { data, error: supabaseError } = await supabase.functions.invoke('extract-metadata', {
+        body: { url },
       });
       
-      if (!response.ok) {
-        throw new Error(`Function returned ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log("Cloudflare Function successfully returned metadata", data);
+      if (supabaseError) throw supabaseError;
+      console.log("Supabase Edge Function successfully returned metadata", data);
       return data;
-    } catch (error) {
-      console.error("Error extracting metadata from Cloudflare Function:", error);
+    } catch (supabaseError) {
+      console.error("Error extracting metadata from Supabase:", supabaseError);
       
-      // Fallback: Try using Supabase Edge Function as backup
+      // Local fallback as last resort
       try {
-        console.log("Attempting to use Supabase Edge Function as fallback");
-        const { data, error: supabaseError } = await supabase.functions.invoke('extract-metadata', {
-          body: { url },
-        });
+        console.log("Using local fallback for metadata extraction");
+        const parsedUrl = new URL(url);
+        const domain = parsedUrl.hostname.replace('www.', '');
         
-        if (supabaseError) throw supabaseError;
-        console.log("Supabase Edge Function successfully returned metadata", data);
-        return data;
-      } catch (supabaseError) {
-        console.error("Error extracting metadata from Supabase:", supabaseError);
-        
-        // Local fallback as last resort
-        try {
-          console.log("Using local fallback for metadata extraction");
-          const parsedUrl = new URL(url);
-          const domain = parsedUrl.hostname.replace('www.', '');
-          
-          // Try to get the title from the URL path, where the last part might be the page name
-          let title = domain;
-          const pathSegments = parsedUrl.pathname.split('/').filter(segment => segment);
-          if (pathSegments.length > 0) {
-            const lastSegment = pathSegments[pathSegments.length - 1];
-            // If the last segment contains hyphens or underscores, it might be a formatted title
-            if (lastSegment.includes('-') || lastSegment.includes('_')) {
-              const formattedTitle = lastSegment
-                .replace(/[-_]/g, ' ') // Replace hyphens and underscores with spaces
-                .replace(/\.\w+$/, '') // Remove file extension if present
-                .split(' ')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Capitalize first letter of each word
-                .join(' ');
-              
-              if (formattedTitle.length > 0) {
-                title = formattedTitle;
-              }
+        // Try to get the title from the URL path, where the last part might be the page name
+        let title = domain;
+        const pathSegments = parsedUrl.pathname.split('/').filter(segment => segment);
+        if (pathSegments.length > 0) {
+          const lastSegment = pathSegments[pathSegments.length - 1];
+          // If the last segment contains hyphens or underscores, it might be a formatted title
+          if (lastSegment.includes('-') || lastSegment.includes('_')) {
+            const formattedTitle = lastSegment
+              .replace(/[-_]/g, ' ') // Replace hyphens and underscores with spaces
+              .replace(/\.\w+$/, '') // Remove file extension if present
+              .split(' ')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Capitalize first letter of each word
+              .join(' ');
+            
+            if (formattedTitle.length > 0) {
+              title = formattedTitle;
             }
           }
-          
-          return {
-            title: title,
-            description: `Bookmark from ${domain}${pathSegments.length > 0 ? ' - ' + pathSegments.join('/') : ''}`,
-            favicon: `${parsedUrl.protocol}//${parsedUrl.host}/favicon.ico`,
-            metadata: { 
-              source: 'local-fallback',
-              domain: domain,
-              url: url,
-              path: parsedUrl.pathname
-            }
-          };
-        } catch (fallbackError) {
-          console.error("Fallback metadata extraction failed:", fallbackError);
-          return {
-            title: url,
-            description: null,
-            favicon: null,
-            metadata: { source: 'local-fallback-minimal' }
-          };
         }
+        
+        return {
+          title: title,
+          description: `Bookmark from ${domain}${pathSegments.length > 0 ? ' - ' + pathSegments.join('/') : ''}`,
+          favicon: `${parsedUrl.protocol}//${parsedUrl.host}/favicon.ico`,
+          metadata: { 
+            source: 'local-fallback',
+            domain: domain,
+            url: url,
+            path: parsedUrl.pathname
+          }
+        };
+      } catch (fallbackError) {
+        console.error("Fallback metadata extraction failed:", fallbackError);
+        return {
+          title: url,
+          description: null,
+          favicon: null,
+          metadata: { source: 'local-fallback-minimal' }
+        };
       }
     }
   };
