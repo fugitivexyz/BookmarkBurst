@@ -1,0 +1,16 @@
+{
+  "name": "Bookmarko",
+  "short_name": "Bookmarko",
+  "description": "Organize Your Web - Save, tag, and find your bookmarks easily",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f3e8",
+  "theme_color": "#f8f3e8",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+} 
