@@ -36,16 +36,15 @@ export function useBookmarks() {
 
   const extractMetadata = async (url: string) => {
     try {
-      console.log("Attempting to use Supabase Edge Function for metadata");
+      // Use Supabase Edge Function for metadata extraction
       const { data, error: supabaseError } = await supabase.functions.invoke('extract-metadata', {
         body: { url },
       });
       
       if (supabaseError) throw supabaseError;
-      console.log("Supabase Edge Function successfully returned metadata", data);
       return data;
-    } catch (supabaseError) {
-      console.error("Error extracting metadata from Supabase:", supabaseError);
+    } catch (error) {
+      console.error("Error extracting metadata from Supabase:", error);
       
       // Local fallback as last resort
       try {
