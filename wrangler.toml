@@ -4,7 +4,11 @@ main = "workers-site/index.js"
 
 # Configure for Cloudflare Pages deployment
 [site]
-bucket = "./dist"
+bucket = "./client/dist"
+
+# Configure the Assets binding
+[site.assets]
+binding = "ASSETS"
 
 # Specify the main file for Pages
 main = "./client/dist/index.html" 
