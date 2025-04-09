@@ -34,7 +34,7 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 grid w-[calc(100%-2rem)] max-w-md gap-4 border bg-background p-5 shadow-lg sm:rounded-lg",
+        "fixed z-50 left-[50%] top-1/2 -translate-x-1/2 -translate-y-1/2 grid w-fit border bg-background p-5 shadow-lg sm:rounded-lg neo-brutal-box no-transitions DialogContent",
         className
       )}
       {...props}
@@ -63,7 +63,7 @@ const AlertDialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:space-x-2",
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 DialogFooter",
       className
     )}
     {...props}

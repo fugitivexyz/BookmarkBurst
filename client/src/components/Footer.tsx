@@ -12,7 +12,7 @@ export default function Footer() {
               </div>
               <h2 className="ml-3 text-2xl font-bold font-space tracking-tight">Bookmarko</h2>
             </div>
-            <p className="mt-2 text-gray-400">Your neo-brutalist bookmark manager</p>
+            <p className="mt-2 text-gray-400">Your smart bookmark organization solution</p>
           </div>
           <div className="flex space-x-6">
             <a href="#" className="hover:text-accent transition-colors">Home</a>

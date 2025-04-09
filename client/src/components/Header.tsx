@@ -23,7 +23,7 @@ export default function Header() {
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center gap-2">
           <BookmarkIcon className="h-6 w-6" />
-          <h1 className="text-xl font-bold">Bookmark Manager</h1>
+          <h1 className="text-xl font-bold">Bookmarko</h1>
         </div>
 
         <div className="flex items-center gap-4">

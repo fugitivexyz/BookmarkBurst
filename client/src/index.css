@@ -81,24 +81,52 @@
     animation: none !important;
   }
   
-  /* Dialog specific overrides */
+  /* Dialog improvements */
+  .DialogContent {
+    max-width: 500px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    gap: 1rem;
+  }
+
+  .DialogContent h2 {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .DialogContent p {
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  .DialogFooter {
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  /* Mobile dialog improvements */
+  @media (max-width: 640px) {
+    .DialogContent {
+      width: 95vw;
+      padding: 1rem;
+    }
+    
+    .DialogFooter {
+      flex-direction: column-reverse;
+      gap: 0.5rem;
+    }
+    
+    .DialogFooter button {
+      width: 100%;
+    }
+  }
+
   .neo-brutal-box.no-transitions {
     border: 2px solid black !important;
     border-radius: 0 !important;
     box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 1) !important;
-    max-height: calc(100vh - 5rem) !important;
-    overflow-y: auto !important;
-    left: 50% !important;
-    transform: translateX(-50%) translateY(-50%) !important;
-  }
-  
-  /* Mobile dialog improvements */
-  @media (max-width: 640px) {
-    .neo-brutal-box.no-transitions {
-      max-width: calc(100% - 2rem) !important;
-      width: calc(100% - 2rem) !important;
-      padding: 1rem !important;
-      margin: 0 !important;
-    }
   }
 }
