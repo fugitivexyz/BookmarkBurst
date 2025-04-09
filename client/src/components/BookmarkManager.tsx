@@ -8,7 +8,7 @@ import { SearchBar } from "./SearchBar";
 import { TagFilter } from "./TagFilter";
 import { ImportExport } from "./ImportExport";
 import { SortOptions, type SortField, type SortOrder } from "./SortOptions";
-import { InsertBookmark, Bookmark } from "@shared/schema";
+import { Bookmark, InsertBookmark } from "@/lib/types";
 import { queryClient } from "@/lib/queryClient";
 
 export default function BookmarkManager() {
@@ -17,8 +17,7 @@ export default function BookmarkManager() {
     isLoading, 
     updateBookmark, 
     deleteBookmark, 
-    addBookmark, 
-    queryClient 
+    addBookmark 
   } = useBookmarks();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,7 +35,7 @@ export default function BookmarkManager() {
     // Filter by selected tags
     if (selectedTags.length > 0) {
       result = result.filter(bookmark => 
-        bookmark.tags ? selectedTags.every(tag => bookmark.tags.includes(tag)) : false
+        bookmark.tags ? selectedTags.every(tag => bookmark.tags?.includes(tag)) : false
       );
     }
     
@@ -57,8 +56,8 @@ export default function BookmarkManager() {
       
       // Extract values based on sort field
       if (sortField === "createdAt") {
-        valueA = new Date(a.createdAt).getTime();
-        valueB = new Date(b.createdAt).getTime();
+        valueA = new Date(a.created_at).getTime();
+        valueB = new Date(b.created_at).getTime();
       } else if (sortField === "title") {
         valueA = a.title.toLowerCase();
         valueB = b.title.toLowerCase();
@@ -110,7 +109,7 @@ export default function BookmarkManager() {
     setSortOrder(order);
   };
   
-  const handleUpdateBookmark = (id: number, data: { title: string; description: string; tags: string[] }) => {
+  const handleUpdateBookmark = (id: number, data: { title: string; description: string | null; tags: string[] | null }) => {
     updateBookmark({ id, data });
   };
   
@@ -125,7 +124,7 @@ export default function BookmarkManager() {
     }
     
     // Refresh the bookmarks list
-    queryClient.invalidateQueries({ queryKey: ['/api/bookmarks'] });
+    queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
   };
   
   return (

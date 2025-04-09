@@ -7,22 +7,29 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { insertUserSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import { Redirect } from "wouter";
-import { Loader2 } from "lucide-react";
+import { Redirect, useLocation } from "wouter";
+import { Loader2, Mail, AlertCircle, BookmarkIcon } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useEffect, useState } from "react";
 
-// Extend the schema with validation rules
+// Email and password validation schema
 const loginFormSchema = z.object({
-  username: z.string().min(3, {
-    message: "Username must be at least 3 characters.",
+  email: z.string().email({
+    message: "Please enter a valid email address.",
   }),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
   }),
 });
 
-const registerFormSchema = insertUserSchema.extend({
+const registerFormSchema = z.object({
+  email: z.string().email({
+    message: "Please enter a valid email address.",
+  }),
+  username: z.string().min(3, {
+    message: "Username must be at least 3 characters.",
+  }),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
   }),
@@ -36,13 +43,15 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
 export default function AuthPage() {
-  const { user, isLoading, loginMutation, registerMutation } = useAuth();
+  const { user, isLoading, loginMutation, registerMutation, emailVerificationSent, clearEmailVerificationState } = useAuth();
+  const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<string>("login");
   
   // Define login form
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -51,6 +60,7 @@ export default function AuthPage() {
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
+      email: "",
       username: "",
       password: "",
       confirmPassword: "",
@@ -64,14 +74,34 @@ export default function AuthPage() {
 
   // Handle register form submission
   const onRegisterSubmit = (values: RegisterFormValues) => {
-    // Remove confirmPassword as it's not part of the User schema
+    // Remove confirmPassword as it's not needed by the API
     const { confirmPassword, ...userData } = values;
     registerMutation.mutate(userData);
   };
-
+  
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === "login") {
+      clearEmailVerificationState();
+    }
+  };
+  
   // Redirect to home if user is already logged in
-  if (user) {
-    return <Redirect to="/" />;
+  useEffect(() => {
+    if (user) {
+      setLocation("/"); // Force navigation to home
+    }
+  }, [user, setLocation]);
+
+  // If login is successful but user isn't present yet, don't render any content
+  // This prevents the flash of login page when user is actually logged in
+  if (loginMutation.isSuccess && !user && !emailVerificationSent) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-border" />
+      </div>
+    );
   }
 
   return (
@@ -80,13 +110,34 @@ export default function AuthPage() {
       <div className="flex flex-col justify-center w-full md:w-1/2 p-4 md:p-8">
         <div className="mx-auto w-full max-w-md space-y-6">
           <div className="space-y-2 text-center">
-            <h1 className="text-3xl font-bold">Bookmark Manager</h1>
+            <h1 className="text-3xl font-bold">BookmarkBurst</h1>
             <p className="text-gray-500 dark:text-gray-400">
               Login or create an account to manage your bookmarks
             </p>
           </div>
+          
+          {emailVerificationSent && (
+            <Alert className="mb-4">
+              <Mail className="h-4 w-4" />
+              <AlertTitle>Verification Email Sent</AlertTitle>
+              <AlertDescription>
+                Please check your email for a verification link to complete your registration.
+                You can close this page and click the link when you receive it.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {loginMutation.isError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Authentication Error</AlertTitle>
+              <AlertDescription>
+                {loginMutation.error?.message || "There was an error logging in. Please try again."}
+              </AlertDescription>
+            </Alert>
+          )}
 
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>
@@ -98,7 +149,7 @@ export default function AuthPage() {
                 <CardHeader>
                   <CardTitle>Login</CardTitle>
                   <CardDescription>
-                    Enter your username and password to access your bookmarks
+                    Enter your email and password to access your bookmarks
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -106,12 +157,12 @@ export default function AuthPage() {
                     <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                       <FormField
                         control={loginForm.control}
-                        name="username"
+                        name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Username</FormLabel>
+                            <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter your username" {...field} />
+                              <Input type="email" placeholder="Enter your email" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -164,6 +215,20 @@ export default function AuthPage() {
                 <CardContent className="space-y-4">
                   <Form {...registerForm}>
                     <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                      <FormField
+                        control={registerForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="Enter your email" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    
                       <FormField
                         control={registerForm.control}
                         name="username"
@@ -250,8 +315,8 @@ export default function AuthPage() {
               <p>Find your bookmarks instantly with powerful search</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg text-center">
-              <h3 className="font-bold mb-2">Import/Export</h3>
-              <p>Easily import or export your bookmark collection</p>
+              <h3 className="font-bold mb-2">Cross-Platform</h3>
+              <p>Access your bookmarks from any device</p>
             </div>
           </div>
         </div>

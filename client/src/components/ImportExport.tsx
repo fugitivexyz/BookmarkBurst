@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Bookmark, InsertBookmark } from '@shared/schema';
+import { Bookmark, InsertBookmark } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface ImportExportProps {

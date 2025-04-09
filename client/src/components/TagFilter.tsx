@@ -1,7 +1,6 @@
-import React from 'react';
-import { Tag, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Bookmark } from '@shared/schema';
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bookmark } from "@/lib/types";
 
 interface TagFilterProps {
   bookmarks: Bookmark[];
@@ -11,65 +10,96 @@ interface TagFilterProps {
   onClearAllTags: () => void;
 }
 
-export function TagFilter({ 
-  bookmarks, 
-  selectedTags, 
-  onTagSelect, 
-  onTagClear, 
-  onClearAllTags 
+export function TagFilter({
+  bookmarks,
+  selectedTags,
+  onTagSelect,
+  onTagClear,
+  onClearAllTags,
 }: TagFilterProps) {
-  // Extract all unique tags from bookmarks
-  const allTags = React.useMemo(() => {
-    const tags = new Set<string>();
-    bookmarks.forEach(bookmark => {
-      if (bookmark.tags) {
-        bookmark.tags.forEach(tag => {
-          tags.add(tag);
-        });
+  // Extract unique tags from all bookmarks
+  const allTags = bookmarks.reduce((tags: string[], bookmark) => {
+    if (bookmark.tags && bookmark.tags.length > 0) {
+      for (const tag of bookmark.tags) {
+        if (!tags.includes(tag)) {
+          tags.push(tag);
+        }
       }
-    });
-    return Array.from(tags).sort();
-  }, [bookmarks]);
+    }
+    return tags;
+  }, []).sort();
 
-  if (allTags.length === 0) return null;
+  // Count bookmarks for each tag
+  const tagCounts = allTags.reduce((counts: Record<string, number>, tag) => {
+    counts[tag] = bookmarks.filter(
+      bookmark => bookmark.tags && bookmark.tags.includes(tag)
+    ).length;
+    return counts;
+  }, {});
 
   return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center">
-          <Tag className="h-5 w-5 mr-2" />
-          <h3 className="font-semibold">Filter by Tags</h3>
-        </div>
+    <div className="mb-4">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="font-bold">Filter by Tags</h3>
         {selectedTags.length > 0 && (
           <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onClearAllTags}
+            onClick={onClearAllTags} 
             className="text-xs py-1 h-auto"
+            variant="ghost"
           >
             Clear All
           </Button>
         )}
       </div>
-      
-      <div className="flex flex-wrap gap-2">
-        {allTags.map(tag => (
-          <button
-            key={tag}
-            onClick={() => selectedTags.includes(tag) ? onTagClear(tag) : onTagSelect(tag)}
-            className={`tag-pill px-3 py-1 flex items-center text-sm ${
-              selectedTags.includes(tag) 
-                ? 'bg-accent text-white' 
-                : 'bg-muted text-gray-600'
-            }`}
-          >
-            <span>{tag}</span>
-            {selectedTags.includes(tag) && (
-              <X className="h-3 w-3 ml-1" />
-            )}
-          </button>
-        ))}
-      </div>
+
+      {/* Selected tags */}
+      {selectedTags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {selectedTags.map((tag) => (
+            <span
+              key={tag}
+              className="bg-secondary py-1 px-2 text-sm rounded-md flex items-center"
+            >
+              {tag}
+              <button
+                onClick={() => onTagClear(tag)}
+                className="ml-1 hover:bg-secondary-foreground/20 rounded"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Tag list */}
+      {allTags.length > 0 ? (
+        <div className="neo-brutal-box bg-white p-2 max-h-40 overflow-y-auto">
+          <div className="flex flex-wrap gap-1">
+            {allTags.map((tag) => {
+              const isSelected = selectedTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  onClick={() => (!isSelected ? onTagSelect(tag) : null)}
+                  className={`py-1 px-2 text-xs rounded flex items-center ${
+                    isSelected
+                      ? "bg-gray-200 text-gray-500 cursor-default"
+                      : "bg-gray-100 hover:bg-gray-200"
+                  }`}
+                  disabled={isSelected}
+                >
+                  {tag} <span className="ml-1 text-gray-500">({tagCounts[tag]})</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="neo-brutal-box bg-white p-3 text-center text-gray-500 text-sm">
+          No tags available. Add tags to your bookmarks first.
+        </div>
+      )}
     </div>
   );
 }

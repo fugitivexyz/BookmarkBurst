@@ -1,266 +1,271 @@
 import { useState } from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { ExternalLink, Pencil, Trash2, X, Save, Clock, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { X } from "lucide-react";
-import type { Bookmark } from "@shared/schema";
+import { Input } from "@/components/ui/input";
+import { Bookmark } from "@/lib/types";
+import { format } from "date-fns";
 
 interface BookmarkCardProps {
   bookmark: Bookmark;
-  onUpdate: (id: number, data: { title: string; description: string; tags: string[] }) => void;
+  onUpdate: (id: number, data: { title: string; description: string | null; tags: string[] | null }) => void;
   onDelete: (id: number) => void;
 }
 
 export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkCardProps) {
-  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(bookmark.title);
   const [editDescription, setEditDescription] = useState(bookmark.description || "");
   const [editTags, setEditTags] = useState<string[]>(bookmark.tags || []);
   const [newTag, setNewTag] = useState("");
   
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  
-  const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Create tag on Enter key
-    if (e.key === "Enter" && newTag.trim()) {
-      e.preventDefault();
-      
-      if (!editTags.includes(newTag.trim())) {
-        setEditTags([...editTags, newTag.trim()]);
-      }
-      
-      setNewTag("");
-    }
-    
-    // Create tag on space or comma
-    if ((e.key === " " || e.key === ",") && newTag.trim()) {
-      e.preventDefault();
-      
-      if (!editTags.includes(newTag.trim())) {
-        setEditTags([...editTags, newTag.trim()]);
-      }
-      
-      setNewTag("");
-    }
+  const randomColorClass = () => {
+    const colors = ["bg-primary", "bg-secondary", "bg-accent text-white"];
+    return colors[Math.floor(Math.random() * colors.length)];
   };
-  
-  const removeTag = (tagToRemove: string) => {
-    setEditTags(editTags.filter(tag => tag !== tagToRemove));
-  };
-  
+
   const handleSaveEdit = () => {
     onUpdate(bookmark.id, {
       title: editTitle,
-      description: editDescription,
-      tags: editTags
+      description: editDescription || null,
+      tags: editTags.length > 0 ? editTags : null
     });
-    setShowEditDialog(false);
+    setIsEditing(false);
   };
-  
-  const handleDelete = () => {
+
+  const handleCancelEdit = () => {
+    // Reset to original values
+    setEditTitle(bookmark.title);
+    setEditDescription(bookmark.description || "");
+    setEditTags(bookmark.tags || []);
+    setIsEditing(false);
+  };
+
+  const handleDeleteClick = () => {
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
     onDelete(bookmark.id);
-    setShowDeleteDialog(false);
+    setIsDeleteDialogOpen(false);
   };
-  
-  // Calculate time ago
-  const getTimeAgo = (date: Date) => {
-    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
-    
-    let interval = seconds / 31536000;
-    if (interval > 1) return `${Math.floor(interval)} years ago`;
-    
-    interval = seconds / 2592000;
-    if (interval > 1) return `${Math.floor(interval)} months ago`;
-    
-    interval = seconds / 86400;
-    if (interval > 1) return `${Math.floor(interval)} days ago`;
-    
-    interval = seconds / 3600;
-    if (interval > 1) return `${Math.floor(interval)} hours ago`;
-    
-    interval = seconds / 60;
-    if (interval > 1) return `${Math.floor(interval)} minutes ago`;
-    
-    return `${Math.floor(seconds)} seconds ago`;
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !editTags.includes(newTag.trim())) {
+      setEditTags([...editTags, newTag.trim()]);
+      setNewTag("");
+    }
   };
-  
-  // Generate a random shape for decoration
-  const shapeIndex = bookmark.id % 3;
-  const shapes = [
-    "w-6 h-6", // Square
-    "w-6 h-6 rounded-full", // Circle
-    "w-6 h-6 transform rotate-45" // Diamond
-  ];
-  
-  const colorIndex = bookmark.id % 3;
-  const colors = ["bg-accent", "bg-secondary", "bg-primary"];
-  
-  return (
-    <>
-      <div className="bookmark-card neo-brutal-box bg-white p-4 relative">
-        <div className="absolute top-0 right-0 transform translate-x-2 -translate-y-2">
-          <div className={`${colors[colorIndex]} ${shapes[shapeIndex]}`}></div>
-        </div>
-        <div className="flex mb-4">
-          <div className="w-10 h-10 mr-3 bg-gray-100 border border-black flex items-center justify-center">
-            {bookmark.favicon ? (
-              <img 
-                src={bookmark.favicon} 
-                alt="Site favicon" 
-                className="max-w-full max-h-full p-1"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            ) : (
-              <span className="text-xs text-gray-400">icon</span>
-            )}
+
+  const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ((e.key === "Enter" || e.key === " " || e.key === ",") && newTag.trim()) {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    setEditTags(editTags.filter(t => t !== tag));
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return format(date, "MMM d, yyyy");
+  };
+
+  // URL domain display
+  const getDomain = (url: string) => {
+    try {
+      const domain = new URL(url).hostname.replace('www.', '');
+      return domain;
+    } catch (e) {
+      return url;
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="neo-brutal-box bg-white p-4 shadow-lg relative">
+        {/* Edit form */}
+        <div className="space-y-4">
+          <div>
+            <label className="block font-bold mb-1 text-sm">Title</label>
+            <Input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full neo-brutal-box"
+            />
           </div>
-          <h3 className="font-space font-bold text-lg truncate">
-            <a 
-              href={bookmark.url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="hover:underline"
+          
+          <div>
+            <label className="block font-bold mb-1 text-sm">Description</label>
+            <Textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              rows={3}
+              className="w-full neo-brutal-box"
+            />
+          </div>
+          
+          <div>
+            <label className="block font-bold mb-1 text-sm">Tags</label>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {editTags.map((tag, index) => (
+                <span 
+                  key={index} 
+                  className="bg-gray-200 px-2 py-1 rounded-md text-sm flex items-center"
+                >
+                  <span>{tag}</span>
+                  <button onClick={() => removeTag(tag)} className="ml-1 text-gray-500 hover:text-red-500">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex">
+              <Input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={handleTagInput}
+                placeholder="Add tags (press Enter)"
+                className="flex-1 neo-brutal-box"
+              />
+              <Button 
+                onClick={handleAddTag} 
+                disabled={!newTag.trim()}
+                variant="ghost"
+                className="ml-2"
+              >
+                <Tag className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button 
+              onClick={handleCancelEdit} 
+              variant="outline"
+              className="neo-brutal-box"
             >
-              {bookmark.title}
-            </a>
-          </h3>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveEdit} 
+              className="neo-brutal-box bg-secondary hover:bg-secondary/90"
+            >
+              <Save className="h-4 w-4 mr-1" />
+              Save
+            </Button>
+          </div>
         </div>
-        <p className="text-gray-600 mb-4 text-sm line-clamp-2">{bookmark.description}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="neo-brutal-box bg-white p-4 shadow-lg flex flex-col h-full">
+      <div className="flex items-start mb-2">
+        {bookmark.favicon && (
+          <img 
+            src={bookmark.favicon} 
+            alt="Site favicon" 
+            className="w-6 h-6 mr-2 border border-gray-200"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        )}
+        <h3 className="font-bold line-clamp-2 flex-1 text-lg">
+          {bookmark.title}
+        </h3>
+      </div>
+      
+      <a 
+        href={bookmark.url} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="text-sm text-primary mb-2 flex items-center hover:underline"
+      >
+        <ExternalLink className="h-3 w-3 mr-1 inline" /> 
+        {getDomain(bookmark.url)}
+      </a>
+      
+      {bookmark.description && (
+        <p className="text-gray-700 mb-4 line-clamp-3 flex-grow">
+          {bookmark.description}
+        </p>
+      )}
+      
+      {bookmark.tags && bookmark.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
-          {bookmark.tags && bookmark.tags.map((tag, index) => (
+          {bookmark.tags.map((tag, index) => (
             <span 
-              key={index} 
-              className={`tag-pill text-xs px-2 py-0.5 ${
-                index % 3 === 0 ? 'bg-secondary' : 
-                index % 3 === 1 ? 'bg-primary' : 'bg-accent text-white'
-              }`}
+              key={index}
+              className={`inline-block px-2 py-0.5 text-xs rounded ${randomColorClass()}`}
             >
               {tag}
             </span>
           ))}
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-xs text-gray-500">
-            {bookmark.createdAt ? getTimeAgo(bookmark.createdAt) : "Just now"}
-          </span>
-          <div className="flex space-x-1">
-            <button className="p-1 neo-brutal-box" onClick={() => setShowEditDialog(true)}>
-              <Edit className="h-4 w-4" />
-            </button>
-            <button className="p-1 neo-brutal-box" onClick={() => setShowDeleteDialog(true)}>
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
+      )}
+      
+      <div className="flex justify-between items-center mt-auto pt-2 text-xs text-gray-500">
+        <span className="flex items-center">
+          <Clock className="h-3 w-3 mr-1" />
+          {formatDate(bookmark.created_at)}
+        </span>
+        
+        <div className="flex space-x-1">
+          <Button 
+            onClick={() => setIsEditing(true)} 
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button 
+            onClick={handleDeleteClick} 
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
       
-      {/* Edit Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="neo-brutal-box-lg">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-space">Edit Bookmark</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="font-semibold">Title</label>
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="neo-brutal-box border-2 border-black"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="font-semibold">Description</label>
-              <Textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                className="neo-brutal-box border-2 border-black"
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="font-semibold">Tags</label>
-              <div className="flex flex-wrap items-center gap-2 p-3 neo-brutal-box bg-white">
-                {editTags.map((tag, index) => (
-                  <span 
-                    key={index} 
-                    className={`tag-pill px-3 py-1 ${
-                      index % 3 === 0 ? 'bg-secondary' : 
-                      index % 3 === 1 ? 'bg-primary' : 'bg-accent text-white'
-                    } inline-flex items-center`}
-                  >
-                    <span>{tag}</span>
-                    <button className="ml-2" onClick={() => removeTag(tag)}>
-                      <X className="h-4 w-4" />
-                    </button>
-                  </span>
-                ))}
-                <Input 
-                  type="text" 
-                  className="flex-1 py-1 px-2 border-b-2 border-black focus:outline-none" 
-                  placeholder="Add tags (Enter, space or comma to separate)" 
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={handleTagInput}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowEditDialog(false)}
-              className="neo-brutal-box"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSaveEdit}
-              className="neo-brutal-box bg-accent text-white hover:bg-accent/90"
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="neo-brutal-box-lg">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-space">Delete Bookmark</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p>Are you sure you want to delete this bookmark? This action cannot be undone.</p>
-            <p className="font-semibold mt-2">{bookmark.title}</p>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDeleteDialog(false)}
-              className="neo-brutal-box"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleDelete}
-              className="neo-brutal-box bg-destructive text-white hover:bg-destructive/90"
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="neo-brutal-box">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Bookmark</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{bookmark.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="neo-brutal-box">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="neo-brutal-box bg-red-500 text-white hover:bg-red-600"
             >
               Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

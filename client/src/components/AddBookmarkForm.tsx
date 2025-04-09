@@ -12,6 +12,8 @@ export default function AddBookmarkForm() {
   const [newTag, setNewTag] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
   
   const [bookmarkData, setBookmarkData] = useState({
     title: "",
@@ -32,6 +34,9 @@ export default function AddBookmarkForm() {
   const handleExtractMetadata = async () => {
     if (!url.trim()) return;
     
+    setIsExtracting(true);
+    setExtractError(null);
+    
     try {
       const metadata = await extractMetadata(url);
       
@@ -43,8 +48,26 @@ export default function AddBookmarkForm() {
       });
       
       setShowPreview(true);
+      
+      // Show a message if fallback was used
+      if (metadata.metadata && metadata.metadata.source && metadata.metadata.source.includes('fallback')) {
+        setExtractError("Note: Using local metadata extraction. Edge function could not be reached.");
+      }
     } catch (error) {
       console.error("Error extracting metadata:", error);
+      setExtractError("Could not extract metadata. Please enter details manually.");
+      
+      // Still show preview with empty data
+      setBookmarkData({
+        title: new URL(url).hostname.replace('www.', '') || "",
+        description: "",
+        favicon: "",
+        metadata: {}
+      });
+      
+      setShowPreview(true);
+    } finally {
+      setIsExtracting(false);
     }
   };
   
@@ -85,13 +108,39 @@ export default function AddBookmarkForm() {
         await handleExtractMetadata();
       }
       
+      // Ensure we have a title either from metadata or from the URL domain
+      let finalTitle = bookmarkData.title;
+      if (!finalTitle) {
+        try {
+          const parsedUrl = new URL(url);
+          finalTitle = parsedUrl.hostname.replace('www.', '');
+        } catch (e) {
+          finalTitle = "Untitled Bookmark";
+        }
+      }
+      
+      // Create a minimal metadata object if none exists
+      let finalMetadata = bookmarkData.metadata;
+      if (!finalMetadata || Object.keys(finalMetadata).length === 0) {
+        try {
+          const parsedUrl = new URL(url);
+          finalMetadata = {
+            source: 'minimal-fallback',
+            domain: parsedUrl.hostname,
+            url: url
+          };
+        } catch (e) {
+          finalMetadata = { source: 'minimal-fallback', url: url };
+        }
+      }
+      
       await addBookmark({
         url,
-        title: bookmarkData.title || "Untitled",
-        description: bookmarkData.description || "",
-        favicon: bookmarkData.favicon || "",
-        tags,
-        metadata: bookmarkData.metadata
+        title: finalTitle,
+        description: bookmarkData.description || null,
+        favicon: bookmarkData.favicon || null,
+        tags: tags.length > 0 ? tags : null,
+        metadata: finalMetadata
       });
       
       // Reset form
@@ -104,6 +153,7 @@ export default function AddBookmarkForm() {
         metadata: {}
       });
       setShowPreview(false);
+      setExtractError(null);
     } catch (error) {
       console.error("Error saving bookmark:", error);
     }
@@ -128,8 +178,20 @@ export default function AddBookmarkForm() {
               value={url}
               onChange={handleUrlChange}
               onBlur={handleExtractMetadata}
+              disabled={isExtracting}
             />
           </div>
+          {isExtracting && (
+            <div className="text-sm text-primary mt-1 flex items-center">
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+              Extracting metadata...
+            </div>
+          )}
+          {extractError && (
+            <div className="text-sm text-red-500 mt-1">
+              {extractError}
+            </div>
+          )}
         </div>
         
         {/* Preview section (shows after URL input) */}

@@ -1,0 +1,31 @@
+# Cloudflare Pages configuration
+name = "bookmarkburst"
+compatibility_date = "2023-06-30"
+
+# Build settings
+[build]
+command = "npm run build"
+output_dir = "dist"
+
+# Environment variables required for deployment
+[env.production]
+VITE_SUPABASE_URL = ""
+VITE_SUPABASE_ANON_KEY = ""
+
+[env.preview]
+VITE_SUPABASE_URL = ""
+VITE_SUPABASE_ANON_KEY = ""
+
+# Routes configuration
+[routes]
+include = ["/*"]
+exclude = ["/functions/*"]
+
+# Serve all assets with correct content types
+[[headers]]
+for = "/*"
+[headers.values]
+Content-Security-Policy = "default-src 'self'; connect-src 'self' *.supabase.co data:; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+X-Frame-Options = "DENY"
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin" 

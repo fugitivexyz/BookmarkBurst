@@ -1,6 +1,9 @@
-import https from 'https';
-import http from 'http';
-import { URL } from 'url';
+// Follow this setup guide to integrate the Deno runtime into your project:
+// https://deno.com/manual/getting_started/setup_your_environment
+// This enables autocomplete, linting, etc.
+
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
 interface Metadata {
   title?: string;
@@ -9,9 +12,19 @@ interface Metadata {
   [key: string]: any;
 }
 
-export async function extractMetadata(url: string): Promise<Metadata> {
+async function extractMetadata(url: string): Promise<Metadata> {
   try {
-    const html = await fetchHtml(url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; BookmarkBurst/1.0)'
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Request failed with status code ${response.status}`);
+    }
+    
+    const html = await response.text();
     const metadata: Metadata = {};
     
     // Extract title
@@ -79,45 +92,52 @@ export async function extractMetadata(url: string): Promise<Metadata> {
   }
 }
 
-async function fetchHtml(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const parsedUrl = new URL(url);
-    const client = parsedUrl.protocol === 'https:' ? https : http;
+serve(async (req) => {
+  // Handle CORS if needed
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  
+  try {
+    const { url } = await req.json();
     
-    const options = {
-      hostname: parsedUrl.hostname,
-      path: parsedUrl.pathname + parsedUrl.search,
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; BookmarkoBot/1.0; +https://bookmarko.app)',
+    if (!url || typeof url !== "string") {
+      return new Response(
+        JSON.stringify({ error: "URL is required" }),
+        {
+          status: 400,
+          headers: { 
+            ...corsHeaders, 
+            "Content-Type": "application/json",
+          },
+        },
+      );
+    }
+    
+    const metadata = await extractMetadata(url);
+    
+    return new Response(
+      JSON.stringify(metadata),
+      {
+        status: 200,
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
       },
-      timeout: 10000
-    };
-    
-    const req = client.request(options, (res) => {
-      if (res.statusCode !== 200) {
-        return reject(new Error(`Request failed with status code ${res.statusCode}`));
-      }
-      
-      let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      
-      res.on('end', () => {
-        resolve(data);
-      });
-    });
-    
-    req.on('error', (err) => {
-      reject(err);
-    });
-    
-    req.on('timeout', () => {
-      req.destroy();
-      reject(new Error('Request timed out'));
-    });
-    
-    req.end();
-  });
-}
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      },
+    );
+  }
+}); 
