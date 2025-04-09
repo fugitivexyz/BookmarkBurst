@@ -1,5 +1,5 @@
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const url = new URL(request.url);
     
     try {
@@ -13,8 +13,10 @@ export default {
       
       return response;
     } catch (e) {
-      // If there's an error, serve the index.html
-      return env.ASSETS.fetch(new Request(`${url.origin}/index.html`, request));
+      return new Response(`Worker error: ${e.message}`, { 
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' }
+      });
     }
   }
 }; 
