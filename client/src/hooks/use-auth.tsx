@@ -146,22 +146,53 @@ function useLogoutMutation() {
   
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw new Error(error.message);
+      try {
+        // Explicitly set scope to global to ensure all devices are logged out
+        const { error } = await supabase.auth.signOut({ scope: 'global' });
+        
+        if (error) throw new Error(error.message);
+        
+        // Clear any local state if needed
+        return { success: true };
+      } catch (error) {
+        console.error("Logout error:", error);
+        // Try a fallback local signout if the global one fails
+        try {
+          await supabase.auth.signOut({ scope: 'local' });
+          return { success: true, fallback: true };
+        } catch (fallbackError) {
+          console.error("Fallback logout failed:", fallbackError);
+          throw error; // Re-throw the original error
+        }
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["auth-user"] });
-      toast({
-        title: "Logged out",
-        description: "You have been logged out successfully.",
-      });
+      
+      if (data.fallback) {
+        toast({
+          title: "Logged out (local only)",
+          description: "You've been logged out on this device.",
+        });
+      } else {
+        toast({
+          title: "Logged out",
+          description: "You have been logged out successfully.",
+        });
+      }
+      
+      // Force a redirect to home page
+      window.location.href = '/';
     },
     onError: (error: Error) => {
       toast({
         title: "Logout failed",
-        description: error.message,
+        description: error.message || "Auth session missing!",
         variant: "destructive",
       });
+      
+      // Even if server-side logout failed, invalidate local auth state
+      queryClient.invalidateQueries({ queryKey: ["auth-user"] });
     },
   });
 }
@@ -183,6 +214,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery({
     queryKey: ["auth-user"],
     queryFn: async () => {
+      // First check if the session is healthy
+      const isHealthy = await checkSessionHealth();
+      
+      if (!isHealthy) {
+        // Session is invalid, return null session
+        return { session: null, user: null };
+      }
+      
       const { data: sessionData } = await supabase.auth.getSession();
       
       if (!sessionData.session) {
@@ -298,4 +337,43 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
+}
+
+// Utility function to check session health and recover if needed
+export async function checkSessionHealth() {
+  try {
+    // Get the current session
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error("Session health check error:", error);
+      return false;
+    }
+    
+    if (!data.session) {
+      console.warn("No session found during health check");
+      return false;
+    }
+    
+    // Check if the session is valid by making a small authenticated request
+    const { error: testError } = await supabase
+      .from('profiles')
+      .select('id')
+      .limit(1);
+    
+    if (testError) {
+      console.error("Session validity test failed:", testError);
+      
+      // If it's an auth error, clear the session
+      if (testError.code === 'PGRST301' || testError.code === '401') {
+        await supabase.auth.signOut({ scope: 'local' });
+        return false;
+      }
+    }
+    
+    return true;
+  } catch (err) {
+    console.error("Unexpected error during session health check:", err);
+    return false;
+  }
 }
