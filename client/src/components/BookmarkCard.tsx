@@ -250,14 +250,15 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="neo-brutal-box no-transitions">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Bookmark</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{bookmark.title}"? This action cannot be undone.
+            <AlertDialogTitle className="text-center text-base sm:text-lg">Delete Bookmark</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-sm">
+              Are you sure you want to delete "{bookmark.title.length > 30 ? bookmark.title.substring(0, 30) + '...' : bookmark.title}"?
+              <br />This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel 
-              className="neo-brutal-box no-transitions w-full h-12 text-base"
+              className="neo-brutal-box no-transitions w-full h-10 sm:h-12 text-base"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsDeleteDialogOpen(false);
@@ -270,7 +271,7 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
                 e.stopPropagation();
                 handleDeleteConfirm();
               }}
-              className="neo-brutal-box no-transitions bg-red-500 text-white w-full h-12 text-base"
+              className="neo-brutal-box no-transitions bg-red-500 text-white w-full h-10 sm:h-12 text-base"
             >
               Delete
             </AlertDialogAction>
