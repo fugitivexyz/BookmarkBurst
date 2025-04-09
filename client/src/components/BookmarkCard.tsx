@@ -248,7 +248,7 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
       
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="neo-brutal-box">
+        <AlertDialogContent className="neo-brutal-box no-transitions">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Bookmark</AlertDialogTitle>
             <AlertDialogDescription>
@@ -256,10 +256,21 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="neo-brutal-box">Cancel</AlertDialogCancel>
+            <AlertDialogCancel 
+              className="neo-brutal-box no-transitions"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDeleteDialogOpen(false);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleDeleteConfirm}
-              className="neo-brutal-box bg-red-500 text-white hover:bg-red-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteConfirm();
+              }}
+              className="neo-brutal-box no-transitions bg-red-500 text-white"
             >
               Delete
             </AlertDialogAction>

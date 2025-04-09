@@ -67,3 +67,17 @@
     @apply font-space font-bold;
   }
 }
+
+@layer utilities {
+  .no-transitions {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
+  
+  .no-transitions * {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
