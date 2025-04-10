@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Neo-brutalism theme variables */
+:root {
+  --primary-color: #4F7DF3;
+  --primary-dark: #3060E0;
+  --shadow-color: rgba(0, 0, 0, 0.8);
+  --border-width: 2px;
+  --border-radius: 4px;
+  --shadow-offset: 4px;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  width: 350px;
+  height: 550px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  @apply bg-gray-50;
+}
+
+.font-space {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Text truncation */
+.text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Neo-brutalism button styles */
+.neo-brutal-button {
+  @apply bg-primary text-white px-4 py-2 font-bold border-2 border-black;
+  box-shadow: 3px 3px 0px 0px var(--shadow-color);
+  transition: all 0.1s ease-in-out;
+}
+
+.neo-brutal-button:hover {
+  @apply bg-primary-dark;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px var(--shadow-color);
+}
+
+.neo-brutal-button:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px 0px var(--shadow-color);
+}
+
+/* Neo-brutalism box styles */
+.neo-brutal-box {
+  @apply border-2 border-black bg-white rounded;
+  box-shadow: 3px 3px 0px 0px var(--shadow-color);
+}
+
+/* Overrides for form elements to match neo-brutalism */
+input, textarea, select {
+  @apply border-2 border-black rounded;
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.2);
+}
+
+input:focus, textarea:focus, select:focus {
+  @apply outline-none border-primary;
+  box-shadow: 3px 3px 0px 0px rgba(79, 125, 243, 0.3);
+}
+
+/* Header styles */
+header {
+  @apply bg-primary text-white py-3 px-3 border-b-2 border-black;
+  box-shadow: 0px 3px 0px 0px rgba(0, 0, 0, 0.2);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-200;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary rounded;
+  border: 1px solid black;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary-dark;
+}
+
+.tag-pill {
+  border: 1px solid black;
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+} 

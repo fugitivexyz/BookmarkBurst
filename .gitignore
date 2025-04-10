@@ -19,6 +19,9 @@ coverage
 .env*.local
 .wrangler
 
+# Sensitive configuration files
+extension/lib/config.ts
+
 # Logs
 logs
 *.log

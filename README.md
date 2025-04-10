@@ -9,6 +9,7 @@ BookmarkBurst is a web application for efficiently organizing, storing, and mana
 - Automatic metadata extraction from URLs (title, description, favicon)
 - Tagging system for organizing bookmarks
 - Clean and intuitive user interface built with React and Shadcn UI
+- Chrome extension for one-click bookmarking from any website
 
 ## Tech Stack
 
@@ -17,6 +18,7 @@ BookmarkBurst is a web application for efficiently organizing, storing, and mana
 - **State Management**: React Query
 - **Form Handling**: React Hook Form with Zod validation
 - **Deployment**: Cloudflare Pages
+- **Extension**: Chrome Extension with React, TypeScript, and Webpack
 
 ## Setup
 
@@ -26,6 +28,7 @@ BookmarkBurst is a web application for efficiently organizing, storing, and mana
 - npm or yarn
 - Supabase account
 - Cloudflare account (for deployment)
+- Chrome browser (for extension development)
 
 ### Supabase Setup
 
@@ -57,6 +60,35 @@ npm run dev
 ```
 
 5. The application will be available at `http://localhost:5000`
+
+### Chrome Extension Development
+
+1. Navigate to the extension directory:
+
+```bash
+cd extension
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Configure your Supabase credentials:
+   - Rename `lib/config.template.ts` to `lib/config.ts`
+   - Update the values in `config.ts` with your Supabase URL and anon key
+
+4. Build the extension:
+
+```bash
+npm run build
+```
+
+5. Load the extension in Chrome:
+   - Open Chrome and navigate to `chrome://extensions/`
+   - Enable "Developer mode" in the top right
+   - Click "Load unpacked" and select the `dist` directory in the extension folder
 
 ### Cloudflare Pages Deployment
 
@@ -112,11 +144,26 @@ If the metadata extraction function fails:
 │   └── wrangler.toml        # Cloudflare configuration
 ├── functions/               # Cloudflare Functions
 │   └── extract-metadata/    # Metadata extraction function
+├── extension/               # Chrome extension
+│   ├── components/          # React components for the extension
+│   ├── lib/                 # Extension utilities and API functions
+│   ├── popup/               # Extension popup UI
+│   ├── content/             # Content scripts
+│   └── background.ts        # Background script
 ├── supabase/                # Supabase configuration
 │   ├── functions/           # Supabase Edge Functions (backup)
 │   └── migrations/          # SQL migrations for database setup
 └── README.md                # Project documentation
 ```
+
+## Chrome Extension Features
+
+- One-click bookmarking from any web page
+- Automatic metadata extraction (title, URL, favicon, description)
+- Tag management directly from the extension
+- Edit and delete functionality for existing bookmarks
+- Neo-brutalism design matching the main application's aesthetic
+- Responsive design optimized for extension popup
 
 ## License
 
