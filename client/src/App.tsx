@@ -13,6 +13,7 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={Home} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/auth/callback" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
   );

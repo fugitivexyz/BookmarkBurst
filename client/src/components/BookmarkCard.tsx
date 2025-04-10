@@ -176,15 +176,22 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
   return (
     <div className="neo-brutal-box bg-white p-4 shadow-lg flex flex-col h-full">
       <div className="flex items-start mb-2">
-        {bookmark.favicon && (
+        {bookmark.favicon ? (
           <img 
             src={bookmark.favicon} 
             alt="Site favicon" 
             className="w-6 h-6 mr-2 border border-gray-200"
             onError={(e) => {
+              // If favicon fails to load, hide it and use a fallback
               (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
+        ) : (
+          <div className="w-6 h-6 mr-2 bg-gray-200 flex items-center justify-center rounded">
+            <span className="text-xs font-bold text-gray-500">
+              {getDomain(bookmark.url).charAt(0).toUpperCase()}
+            </span>
+          </div>
         )}
         <h3 className="font-bold line-clamp-2 flex-1 text-lg">
           {bookmark.title}

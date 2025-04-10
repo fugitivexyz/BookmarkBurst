@@ -97,12 +97,18 @@ function useRegisterMutation() {
   
   return useMutation({
     mutationFn: async ({ email, password, username }: RegisterData) => {
+      // Get the current URL origin for redirect
+      const currentSiteUrl = window.location.origin;
+      
       // 1. Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: currentSiteUrl,
+          data: {
+            username,
+          }
         }
       });
       
@@ -214,6 +220,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery({
     queryKey: ["auth-user"],
     queryFn: async () => {
+      // Handle any auth redirect parameters in the URL
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        await supabase.auth.getSession();
+      }
+      
       // First check if the session is healthy
       const isHealthy = await checkSessionHealth();
       
