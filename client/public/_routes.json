@@ -1,6 +1,8 @@
 {
   "version": 1,
-  "include": ["/*"],
+  "include": [
+    "/*"
+  ],
   "exclude": [
     "/assets/*",
     "/build/*",
@@ -13,5 +15,15 @@
     "/*.json",
     "/*.js",
     "/*.css"
+  ],
+  "routes": [
+    {
+      "src": "^/auth.*",
+      "dest": "/index.html"
+    },
+    {
+      "src": "^/[^.]*$",
+      "dest": "/index.html"
+    }
   ]
 } 
