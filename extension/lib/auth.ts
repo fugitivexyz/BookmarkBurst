@@ -255,6 +255,9 @@ export async function signUp(email: string, password: string): Promise<void> {
   const { error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      emailRedirectTo: 'https://bookmarko.engn.dev/auth/callback',
+    }
   });
   
   if (error) {

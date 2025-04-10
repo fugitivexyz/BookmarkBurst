@@ -63,7 +63,7 @@ export function extractMetadataFromPage(): Metadata {
 export async function extractMetadataFromUrl(url: string): Promise<Metadata> {
   try {
     // Try to use the Supabase Edge Function
-    const response = await fetch(`https://your-supabase-project.supabase.co/functions/v1/extract-metadata`, {
+    const response = await fetch(`https://mktyuvhhsiuuminlolxa.supabase.co/functions/v1/extract-metadata`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
