@@ -1,6 +1,6 @@
-# BookmarkBurst
+# Bookmarko
 
-BookmarkBurst is a web application for efficiently organizing, storing, and managing bookmarks across devices.
+Bookmarko is a web application for efficiently organizing, storing, and managing bookmarks across devices.
 
 ## Features
 
