@@ -101,34 +101,47 @@ function useRegisterMutation() {
       // Use the production URL explicitly for email redirects
       const productionSiteUrl = "https://bookmarko.engn.dev";
       
-      // 1. Sign up with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: productionSiteUrl,
-          data: {
-            username,
+      try {
+        // 1. Sign up with Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${productionSiteUrl}/auth/callback`,
+            data: {
+              username,
+            }
           }
+        });
+        
+        if (authError) throw new Error(`Authentication error: ${authError.message}`);
+        if (!authData.user) throw new Error('User registration failed: No user data returned');
+        
+        // 2. Create a profile with the username
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: authData.user.id,
+              username,
+              updated_at: new Date().toISOString(),
+            });
+            
+          if (profileError) {
+            console.error('Profile creation error:', profileError);
+            // Continue with auth flow even if profile creation fails
+            // We'll create the profile later on first login
+          }
+        } catch (profileErr) {
+          console.error('Exception during profile creation:', profileErr);
+          // Continue with auth flow even if profile creation fails
         }
-      });
-      
-      if (authError) throw new Error(authError.message);
-      
-      // 2. Create a profile with the username
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            username,
-            updated_at: new Date().toISOString(),
-          });
-          
-        if (profileError) throw new Error(profileError.message);
+        
+        return authData;
+      } catch (error) {
+        console.error('Registration error:', error);
+        throw error;
       }
-      
-      return authData;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["auth-user"] });
@@ -394,38 +407,47 @@ export function useAuth() {
 // Utility function to check session health and recover if needed
 export async function checkSessionHealth() {
   try {
-    // Get the current session
-    const { data, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error("Session health check error:", error);
-      return false;
-    }
+    const { data } = await supabase.auth.getSession();
     
     if (!data.session) {
-      console.warn("No session found during health check");
       return false;
     }
     
-    // Check if the session is valid by making a small authenticated request
-    const { error: testError } = await supabase
+    // Try to get profile data
+    const userId = data.session.user.id;
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('id')
-      .limit(1);
+      .select('username')
+      .eq('id', userId)
+      .single();
     
-    if (testError) {
-      console.error("Session validity test failed:", testError);
-      
-      // If it's an auth error, clear the session
-      if (testError.code === 'PGRST301' || testError.code === '401') {
-        await supabase.auth.signOut({ scope: 'local' });
-        return false;
+    // If there's no profile, create one as a fallback
+    if (profileError && profileError.message.includes("contains 0 rows")) {
+      try {
+        console.log("Profile not found, creating one as fallback");
+        // Create a basic profile for the user
+        const username = data.session.user.email?.split('@')[0] || 'user';
+        
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            username: username,
+            updated_at: new Date().toISOString(),
+          });
+        
+        if (insertError) {
+          console.error("Error creating profile on session check:", insertError);
+        }
+      } catch (err) {
+        console.error("Failed to create profile on session check:", err);
       }
     }
     
+    // Session exists, it's valid
     return true;
-  } catch (err) {
-    console.error("Unexpected error during session health check:", err);
+  } catch (error) {
+    console.error("Error checking session health:", error);
     return false;
   }
 }
