@@ -98,14 +98,15 @@ function useRegisterMutation() {
   return useMutation({
     mutationFn: async ({ email, password, username }: RegisterData) => {
       // Get the current URL origin for redirect
-      const currentSiteUrl = window.location.origin;
+      // Use the production URL explicitly for email redirects
+      const productionSiteUrl = "https://bookmarko.engn.dev";
       
       // 1. Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: currentSiteUrl,
+          emailRedirectTo: productionSiteUrl,
           data: {
             username,
           }
@@ -134,7 +135,10 @@ function useRegisterMutation() {
       
       toast({
         title: "Registration successful",
-        description: "Please check your email for a verification link.",
+        description: "Please check your email for a verification link. Check your spam folder if you don't see it within a few minutes.",
+        variant: "default", 
+        className: "border-green-500 bg-green-50",
+        duration: 10000, // Show for 10 seconds
       });
     },
     onError: (error: Error) => {
@@ -305,8 +309,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   // Listen for auth changes
   useEffect(() => {
+    // First check if there's a hash in the URL that indicates email verification
+    const handleVerificationResponse = async () => {
+      if (window.location.hash.includes('#access_token=')) {
+        try {
+          // Process the hash fragment from the URL
+          const { data, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('Verification error:', error);
+            toast({
+              title: "Verification failed",
+              description: error.message,
+              variant: "destructive",
+            });
+          } else if (data?.session) {
+            // Successfully verified and logged in
+            queryClient.invalidateQueries({ queryKey: ["auth-user"] });
+            toast({
+              title: "Email verified",
+              description: "Your email has been verified and you're now logged in.",
+            });
+            
+            // Redirect to home page after successful verification
+            window.location.href = '/';
+          }
+        } catch (err) {
+          console.error('Error processing verification:', err);
+        }
+      }
+    };
+    
+    // Handle the verification if present in URL
+    handleVerificationResponse();
+    
+    // Set up the regular auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       queryClient.invalidateQueries({ queryKey: ["auth-user"] });
+      
+      console.log('Auth state change event:', event);
       
       // Check for sign up event to track email verification status
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
@@ -321,7 +362,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [loginMutation.isIdle, registerMutation.isSuccess]);
+  }, [loginMutation.isIdle, registerMutation.isSuccess, queryClient, toast]);
   
   return (
     <AuthContext.Provider

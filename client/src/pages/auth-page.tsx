@@ -12,6 +12,7 @@ import { Redirect, useLocation } from "wouter";
 import { Loader2, Mail, AlertCircle, BookmarkIcon, TagIcon, Search, RefreshCw, Smartphone } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 // Email and password validation schema
 const loginFormSchema = z.object({
@@ -73,10 +74,18 @@ export default function AuthPage() {
   };
 
   // Handle register form submission
-  const onRegisterSubmit = (values: RegisterFormValues) => {
-    // Remove confirmPassword as it's not needed by the API
-    const { confirmPassword, ...userData } = values;
-    registerMutation.mutate(userData);
+  const onRegisterSubmit = async (data: RegisterFormValues) => {
+    try {
+      // Remove confirmPassword as it's not needed by the API
+      const { confirmPassword, ...userData } = data;
+      await registerMutation.mutateAsync(userData);
+      
+      // Toast is already shown by the mutation's onSuccess handler
+      // No need to show another toast here
+    } catch (error) {
+      // The error will be handled by the mutation's onError handler
+      console.error("Registration error:", error);
+    }
   };
   
   // Handle tab change
