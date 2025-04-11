@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { Input } from './Input';
 import { TagInput } from './TagInput';
-import { saveBookmark, prepareBookmarkFromMetadata, isUrlBookmarked, updateBookmark } from '../lib/bookmarks';
+import { saveBookmark, prepareBookmarkFromMetadata, updateBookmark } from '../lib/bookmarks';
 import { Metadata } from '../lib/types';
 import { extractMetadataFromUrl } from '../lib/metadata';
 
@@ -35,7 +35,6 @@ export const BookmarkForm: React.FC<BookmarkFormProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isAlreadyBookmarked, setIsAlreadyBookmarked] = useState(false);
   
   // Update state when initialUrl, initialMetadata, or initialTags changes
   useEffect(() => {
@@ -62,13 +61,6 @@ export const BookmarkForm: React.FC<BookmarkFormProps> = ({
     }
   }, [url, initialMetadata]);
   
-  // Check if URL is already bookmarked
-  useEffect(() => {
-    if (url) {
-      checkIfBookmarked();
-    }
-  }, [url]);
-  
   const fetchMetadata = async () => {
     if (!url) return;
     
@@ -87,15 +79,6 @@ export const BookmarkForm: React.FC<BookmarkFormProps> = ({
       setError('Could not fetch page metadata. Please enter details manually.');
     } finally {
       setIsLoading(false);
-    }
-  };
-  
-  const checkIfBookmarked = async () => {
-    try {
-      const bookmarked = await isUrlBookmarked(url);
-      setIsAlreadyBookmarked(bookmarked);
-    } catch (err) {
-      console.error('Error checking if URL is bookmarked:', err);
     }
   };
   
@@ -178,12 +161,6 @@ export const BookmarkForm: React.FC<BookmarkFormProps> = ({
       {successMessage && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded mb-3 text-sm">
           {successMessage}
-        </div>
-      )}
-      
-      {isAlreadyBookmarked && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-3 py-2 rounded mb-3 text-sm">
-          This URL is already in your bookmarks.
         </div>
       )}
       

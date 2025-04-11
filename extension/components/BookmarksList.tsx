@@ -140,23 +140,11 @@ export const BookmarksList: React.FC<BookmarksListProps> = ({ onNewBookmark, hig
     <div className="p-3">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold font-space">Your Bookmarks</h1>
-        <button 
-          onClick={onNewBookmark}
-          className="text-sm bg-primary text-white px-3 py-1 rounded hover:bg-primary-dark shadow-[3px_3px_0px_0px_rgba(0,0,0,0.8)] border-2 border-black"
-        >
-          Add New
-        </button>
       </div>
 
       {bookmarks.length === 0 ? (
         <div className="text-center py-10 text-gray-500">
           <p className="mb-2">You don't have any bookmarks yet.</p>
-          <button 
-            onClick={onNewBookmark}
-            className="text-primary hover:underline font-bold"
-          >
-            Add your first bookmark
-          </button>
         </div>
       ) : (
         <ul className="space-y-3 max-w-full">

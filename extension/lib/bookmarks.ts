@@ -7,14 +7,17 @@ export async function saveBookmark(bookmark: InsertBookmark): Promise<Bookmark> 
   const user = await getUser();
   
   if (!user) {
+    console.error('User not authenticated when attempting to save bookmark');
     throw new Error('User not authenticated');
   }
   
   const supabase = await getSupabase();
   if (!supabase) {
+    console.error('Supabase client not initialized when attempting to save bookmark');
     throw new Error('Supabase client not initialized');
   }
   
+  console.log('Saving bookmark for user:', user.id);
   const { data, error } = await supabase
     .from('bookmarks')
     .insert({
@@ -25,9 +28,11 @@ export async function saveBookmark(bookmark: InsertBookmark): Promise<Bookmark> 
     .single();
   
   if (error) {
+    console.error('Error saving bookmark:', error.message, 'Details:', error.details, 'Hint:', error.hint, 'Code:', error.code);
     throw error;
   }
   
+  console.log('Bookmark saved successfully:', data);
   return data;
 }
 
@@ -36,14 +41,17 @@ export async function getRecentBookmarks(limit: number = 5): Promise<Bookmark[]>
   const user = await getUser();
   
   if (!user) {
+    console.log('User not authenticated, returning empty bookmark list');
     return [];
   }
   
   const supabase = await getSupabase();
   if (!supabase) {
+    console.log('Supabase client not initialized, returning empty bookmark list');
     return [];
   }
   
+  console.log('Fetching recent bookmarks for user:', user.id);
   const { data, error } = await supabase
     .from('bookmarks')
     .select('*')
@@ -52,10 +60,11 @@ export async function getRecentBookmarks(limit: number = 5): Promise<Bookmark[]>
     .limit(limit);
   
   if (error) {
-    console.error('Error fetching recent bookmarks:', error);
+    console.error('Error fetching recent bookmarks:', error.message, 'Details:', error.details, 'Hint:', error.hint, 'Code:', error.code);
     return [];
   }
   
+  console.log('Fetched bookmarks:', data?.length || 0, 'items');
   return data || [];
 }
 
@@ -64,14 +73,17 @@ export async function isUrlBookmarked(url: string): Promise<boolean> {
   const user = await getUser();
   
   if (!user) {
+    console.log('User not authenticated, URL bookmark check returning false');
     return false;
   }
   
   const supabase = await getSupabase();
   if (!supabase) {
+    console.log('Supabase client not initialized, URL bookmark check returning false');
     return false;
   }
   
+  console.log('Checking if URL is bookmarked for user:', user.id, 'URL:', url);
   const { count, error } = await supabase
     .from('bookmarks')
     .select('*', { count: 'exact', head: true })
@@ -79,11 +91,13 @@ export async function isUrlBookmarked(url: string): Promise<boolean> {
     .eq('url', url);
   
   if (error) {
-    console.error('Error checking if URL is bookmarked:', error);
+    console.error('Error checking if URL is bookmarked:', error.message, 'Details:', error.details, 'Hint:', error.hint, 'Code:', error.code);
     return false;
   }
   
-  return count !== null && count > 0;
+  const isBookmarked = count !== null && count > 0;
+  console.log('URL bookmark check result:', isBookmarked);
+  return isBookmarked;
 }
 
 // Prepare bookmark data from metadata

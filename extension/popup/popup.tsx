@@ -44,6 +44,7 @@ const Popup: React.FC = () => {
   const [viewState, setViewState] = useState<ViewState>('form');
   const [isUrlAlreadyBookmarked, setIsUrlAlreadyBookmarked] = useState(false);
   const [isCheckingBookmarked, setIsCheckingBookmarked] = useState(true);
+  const [existingBookmarkId, setExistingBookmarkId] = useState<string | null>(null);
 
   // Check authentication status on mount
   useEffect(() => {
@@ -79,7 +80,7 @@ const Popup: React.FC = () => {
                 console.log('URL already bookmarked:', isBookmarked);
                 setIsUrlAlreadyBookmarked(isBookmarked);
                 
-                // If URL is not bookmarked, show the form, otherwise show the list
+                // Always set view state based on whether URL is bookmarked
                 setViewState(isBookmarked ? 'list' : 'form');
               } catch (error) {
                 console.error('Error checking if URL is bookmarked:', error);
@@ -146,8 +147,22 @@ const Popup: React.FC = () => {
     setIsUrlAlreadyBookmarked(true);
   };
 
-  const handleAddNew = () => {
-    // Switch to form view when user wants to add a new bookmark
+  const handleAddNew = async () => {
+    // If the current URL is already bookmarked, stay in list view and show the bookmark
+    if (currentUrl) {
+      try {
+        const isBookmarked = await isUrlBookmarked(currentUrl);
+        if (isBookmarked) {
+          setIsUrlAlreadyBookmarked(true);
+          setViewState('list');
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking if URL is bookmarked:', error);
+      }
+    }
+    
+    // Otherwise, switch to form view
     setViewState('form');
   };
 
@@ -167,12 +182,6 @@ const Popup: React.FC = () => {
           <header className="flex justify-between items-center p-3 bg-primary text-white border-b-2 border-black">
             <h1 className="text-lg font-bold font-space">Bookmarko</h1>
             <div className="flex space-x-2">
-              <button 
-                onClick={() => setViewState(viewState === 'form' ? 'list' : 'form')}
-                className="px-2 py-1 text-xs font-medium bg-white text-primary rounded border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.8)] hover:-translate-y-0.5 hover:-translate-x-0.5 transition-all"
-              >
-                {viewState === 'form' ? 'View List' : 'Add New'}
-              </button>
               <button 
                 onClick={handleLogout}
                 className="px-2 py-1 text-xs font-medium bg-white text-primary rounded border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.8)] hover:-translate-y-0.5 hover:-translate-x-0.5 transition-all"

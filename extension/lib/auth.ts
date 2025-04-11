@@ -62,25 +62,57 @@ export const isAuthenticated = async (): Promise<boolean> => {
     const session = await getSession();
     
     // If no session is stored, user is not authenticated
-    if (!session) return false;
+    if (!session) {
+      console.log('No session found in storage, user not authenticated');
+      return false;
+    }
+    
+    console.log('Found session in storage, checking validity');
     
     // Get Supabase client
     const supabase = await getSupabaseClient();
-    if (!supabase) return false;
+    if (!supabase) {
+      console.log('Supabase client not initialized, user not authenticated');
+      return false;
+    }
+    
+    // First try to get user without session refresh
+    const { data: userData, error: userError } = await supabase.auth.getUser(session.access_token);
+    
+    if (userData?.user) {
+      console.log('Session is valid, user authenticated:', userData.user.id);
+      await storeUser(userData.user);
+      return true;
+    }
+    
+    if (userError) {
+      console.log('Session invalid, attempting refresh:', userError.message);
+    }
     
     // Check if session is valid and refresh if needed
+    console.log('Attempting to refresh session');
     const { data, error } = await supabase.auth.refreshSession(session);
     
-    if (error || !data.session) {
+    if (error) {
+      console.error('Session refresh failed:', error.message);
+      await clearSession();
+      return false;
+    }
+    
+    if (!data.session) {
+      console.error('Session refresh failed: No session returned');
       await clearSession();
       return false;
     }
     
     // Save updated session
+    console.log('Session refreshed successfully, saving updated session for user:', data.user?.id);
     await saveSession(data.session);
+    await storeUser(data.user);
     return true;
   } catch (error) {
     console.error('Error checking authentication:', error);
+    await clearSession(); // Clear session on error to prevent persistent invalid sessions
     return false;
   }
 };
@@ -88,9 +120,14 @@ export const isAuthenticated = async (): Promise<boolean> => {
 // Sign in with email and password
 export const signIn = async (email: string, password: string): Promise<boolean> => {
   try {
+    // First, clear any existing session to ensure clean state
+    console.log('Clearing existing session before login');
+    await clearAuth();
+    
     const supabase = await getSupabaseClient();
     if (!supabase) throw new Error('Supabase client not configured');
     
+    console.log('Attempting to sign in with email and password');
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -100,8 +137,10 @@ export const signIn = async (email: string, password: string): Promise<boolean> 
       throw error || new Error('No session returned');
     }
     
-    // Save session
+    console.log('Login successful, saving new session');
+    // Save session and user
     await saveSession(data.session);
+    await storeUser(data.user);
     return true;
   } catch (error) {
     console.error('Sign in error:', error);
@@ -162,12 +201,31 @@ export const storeUser = (user: User | null): Promise<void> => {
 // Get user from Chrome storage
 export async function getUser(): Promise<User | null> {
   return new Promise<User | null>((resolve, reject) => {
-    chrome.storage.local.get(['user'], (result) => {
+    chrome.storage.local.get(['user'], async (result) => {
       if (chrome.runtime.lastError) {
         reject(chrome.runtime.lastError);
-      } else {
-        resolve(result.user || null);
+        return;
       }
+      
+      if (result.user) {
+        resolve(result.user);
+        return;
+      }
+      
+      // If no user data in storage but we have a session, try to get user with fresh session
+      try {
+        const session = await getSession();
+        if (session) {
+          console.log('No user in storage but session exists, getting fresh user data');
+          const freshUser = await getUserWithFreshSession();
+          resolve(freshUser);
+          return;
+        }
+      } catch (error) {
+        console.error('Error getting fresh user:', error);
+      }
+      
+      resolve(null);
     });
   });
 }
@@ -177,28 +235,58 @@ export async function getUserWithFreshSession() {
   try {
     const session = await getSession();
     
-    if (session) {
-      const supabase = await getSupabaseClient();
-      if (!supabase) return null;
-      
-      // Set the session in Supabase
-      const { data, error } = await supabase.auth.setSession(session);
-      
-      if (error) {
-        await clearAuth();
-        return null;
-      }
-      
-      if (data.session) {
-        await saveSession(data.session);
-        await storeUser(data.user);
-        return data.user;
-      }
+    if (!session) {
+      console.log('No session found for user retrieval');
+      return null;
     }
     
-    return null;
+    console.log('Session found, initializing Supabase client');
+    const supabase = await getSupabaseClient();
+    if (!supabase) {
+      console.log('Supabase client not initialized');
+      return null;
+    }
+    
+    // First try to get the user directly
+    console.log('Getting user with current session token');
+    const { data: userData, error: userError } = await supabase.auth.getUser(session.access_token);
+    
+    if (userData?.user) {
+      console.log('User retrieved successfully with current token:', userData.user.id);
+      // Still store the user even if token is valid
+      await storeUser(userData.user);
+      return userData.user;
+    }
+    
+    if (userError) {
+      console.log('Error getting user with current token, will try session refresh:', userError.message);
+    }
+    
+    // If direct user retrieval fails, try refreshing the session
+    console.log('Setting and refreshing session in Supabase');
+    const { data, error } = await supabase.auth.refreshSession(session);
+    
+    if (error) {
+      console.error('Error refreshing session:', error.message);
+      // Clear session on error to prevent using an invalid session
+      await clearAuth();
+      return null;
+    }
+    
+    if (!data.session || !data.user) {
+      console.error('Session refresh returned empty data');
+      await clearAuth();
+      return null;
+    }
+    
+    console.log('Session refreshed successfully, saving updated session for user:', data.user.id);
+    await saveSession(data.session);
+    await storeUser(data.user);
+    return data.user;
   } catch (error) {
-    console.error('Error getting user with fresh session:', error);
+    console.error('Error in getUserWithFreshSession:', error);
+    // Clear session on any error
+    await clearAuth();
     return null;
   }
 }

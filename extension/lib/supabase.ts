@@ -1,12 +1,31 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config';
+import { getSession } from './auth';
 
 // Create a Supabase client
 export async function getSupabaseClient() {
   try {
-    // Create and return the Supabase client with the credentials from config.ts
-    return createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Create a Supabase client with the anonymous key
+    const client = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Try to get the current session
+    const session = await getSession();
+    
+    // If we have a session, set it on the client
+    if (session) {
+      console.log('Setting existing session on Supabase client');
+      const { error } = await client.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token
+      });
+      
+      if (error) {
+        console.error('Error setting session on Supabase client:', error.message);
+      }
+    }
+    
+    return client;
   } catch (error) {
     console.error('Error creating Supabase client:', error);
     return null;
@@ -16,10 +35,12 @@ export async function getSupabaseClient() {
 // Get lazy-loaded Supabase client
 let supabaseClientPromise: Promise<any> | null = null;
 
+// We should not cache the client anymore since we need a fresh session each time
 export function getSupabase() {
-  if (!supabaseClientPromise) {
-    supabaseClientPromise = getSupabaseClient();
-  }
+  // Clear previous client if any
+  supabaseClientPromise = null;
+  // Get a fresh client with the latest session
+  supabaseClientPromise = getSupabaseClient();
   return supabaseClientPromise;
 }
 
