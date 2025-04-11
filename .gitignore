@@ -22,6 +22,11 @@ coverage
 # Sensitive configuration files
 extension/lib/config.ts
 
+# Chrome Web Store submission files
+extension/store-listing.md
+extension/bookmarko-extension-v*.zip
+extension/testing-checklist.md
+
 # Logs
 logs
 *.log
