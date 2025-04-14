@@ -14,7 +14,7 @@ Bookmarko is a web application for efficiently organizing, storing, and managing
 ## Tech Stack
 
 - **Frontend**: React, TailwindCSS, Shadcn UI
-- **Backend**: Supabase (Auth, Database), Cloudflare Functions
+- **Backend**: Supabase (Auth, Database, Edge Functions)
 - **State Management**: React Query
 - **Form Handling**: React Hook Form with Zod validation
 - **Deployment**: Cloudflare Pages
@@ -92,7 +92,7 @@ npm run build
 
 ### Cloudflare Pages Deployment
 
-The project is set up to be deployed on Cloudflare Pages, which provides both hosting for the static site and Functions for the metadata extraction:
+The project is set up to be deployed on Cloudflare Pages, which provides hosting for the static site:
 
 1. Install Wrangler CLI globally:
 
@@ -126,7 +126,7 @@ wrangler pages deploy dist
 If the metadata extraction function fails:
 
 1. The application will automatically fall back to local metadata extraction
-2. For production, ensure that the Cloudflare Function is properly deployed
+2. For production, ensure that the Supabase Edge Function is properly deployed
 3. The fallback extraction still provides basic functionality even if the Function is unavailable
 
 ## Development
@@ -141,7 +141,7 @@ If the metadata extraction function fails:
 │   │   ├── lib/             # Utility functions and libraries
 │   │   └── pages/           # Page components
 │   ├── public/              # Static assets
-│   └── wrangler.toml        # Cloudflare configuration
+│   └── wrangler.toml        # Cloudflare Pages configuration
 ├── functions/               # Cloudflare Functions
 │   └── extract-metadata/    # Metadata extraction function
 ├── extension/               # Chrome extension
@@ -151,7 +151,8 @@ If the metadata extraction function fails:
 │   ├── content/             # Content scripts
 │   └── background.ts        # Background script
 ├── supabase/                # Supabase configuration
-│   ├── functions/           # Supabase Edge Functions (backup)
+│   ├── functions/           # Supabase Edge Functions
+│   │   └── extract-metadata/# Metadata extraction function
 │   └── migrations/          # SQL migrations for database setup
 └── README.md                # Project documentation
 ```
