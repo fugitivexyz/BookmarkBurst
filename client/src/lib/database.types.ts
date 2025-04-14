@@ -44,6 +44,40 @@ export interface Database {
           tags?: string[] | null
         }
       }
+      tags: {
+        Row: {
+          id: number
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          created_at?: string
+        }
+      }
+      bookmark_tags: {
+        Row: {
+          id: number
+          bookmark_id: number
+          tag_id: number
+        }
+        Insert: {
+          id?: number
+          bookmark_id: number
+          tag_id: number
+        }
+        Update: {
+          id?: number
+          bookmark_id?: number
+          tag_id?: number
+        }
+      }
       profiles: {
         Row: {
           id: string
@@ -69,7 +103,14 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_tags_with_counts: {
+        Args: Record<string, never>
+        Returns: {
+          id: number
+          name: string
+          count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
