@@ -84,7 +84,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       <p className="mt-4 text-sm text-gray-600">
         Don't have an account? Sign up at{' '}
         <a 
-          href="https://bookmarko.engn.dev/auth" 
+          href="https://bookmarko.engn.dev" 
           target="_blank" 
           rel="noopener noreferrer"
           className="text-primary font-medium hover:underline"
