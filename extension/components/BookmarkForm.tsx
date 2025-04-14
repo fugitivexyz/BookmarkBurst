@@ -100,7 +100,7 @@ export const BookmarkForm: React.FC<BookmarkFormProps> = ({
         title,
         description: description || undefined,
         favicon: favicon || undefined,
-        tags: tags.length > 0 ? tags : null,
+        tags: tags,
         metadata: {
           ...metadata,
           saved_from: 'extension',
