@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { X } from "lucide-react";
+import { X, Tag as TagIcon } from "lucide-react";
 
 export default function AddBookmarkForm() {
-  const { extractMetadata, addBookmark, isAdding } = useBookmarks();
+  const { extractMetadata, addBookmark, isAdding, recentTags } = useBookmarks();
   
   const [url, setUrl] = useState("");
   const [newTag, setNewTag] = useState("");
@@ -14,6 +14,29 @@ export default function AddBookmarkForm() {
   const [showPreview, setShowPreview] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  
+  // Create filtered suggestions based on user input
+  const tagSuggestions = recentTags.filter(tag => 
+    !tags.includes(tag) && // Don't suggest already selected tags
+    (!newTag || tag.toLowerCase().includes(newTag.toLowerCase())) // Filter by current input
+  ).slice(0, 5); // Limit to 5 suggestions
+  
+  // Close suggestions when clicking outside
+  const tagInputRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (tagInputRef.current && !tagInputRef.current.contains(event.target as Node)) {
+        setShowTagSuggestions(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   
   const [bookmarkData, setBookmarkData] = useState({
     title: "",
@@ -72,6 +95,13 @@ export default function AddBookmarkForm() {
   };
   
   const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Show suggestions when typing
+    if (newTag.trim()) {
+      setShowTagSuggestions(true);
+    } else {
+      setShowTagSuggestions(false);
+    }
+    
     // Create tag on Enter key
     if (e.key === "Enter" && newTag.trim()) {
       e.preventDefault();
@@ -81,6 +111,7 @@ export default function AddBookmarkForm() {
       }
       
       setNewTag("");
+      setShowTagSuggestions(false);
     }
     
     // Create tag on space or comma
@@ -92,11 +123,21 @@ export default function AddBookmarkForm() {
       }
       
       setNewTag("");
+      setShowTagSuggestions(false);
     }
   };
   
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+  
+  // Add function to handle tag suggestion click
+  const handleTagSuggestionClick = (tag: string) => {
+    if (!tags.includes(tag)) {
+      setTags([...tags, tag]);
+    }
+    setNewTag("");
+    setShowTagSuggestions(false);
   };
   
   const handleSaveBookmark = async () => {
@@ -139,7 +180,7 @@ export default function AddBookmarkForm() {
         title: finalTitle,
         description: bookmarkData.description || null,
         favicon: bookmarkData.favicon || null,
-        tags: tags.length > 0 ? tags : null,
+        tags: tags.length > 0 ? tags : undefined,
         metadata: finalMetadata
       });
       
@@ -249,15 +290,38 @@ export default function AddBookmarkForm() {
                 </button>
               </span>
             ))}
-            <Input 
-              id="tag-input"
-              type="text" 
-              className="flex-1 py-1 px-2 border-b-2 border-black focus:outline-none" 
-              placeholder="Add tags (Enter, space or comma to separate)" 
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={handleTagInput}
-            />
+
+            <div className="flex-1 relative" ref={tagInputRef}>
+              <Input 
+                id="tag-input"
+                type="text" 
+                className="flex-1 neo-brutal-box" 
+                placeholder="Add tags (Enter, space or comma to separate)" 
+                value={newTag}
+                onChange={(e) => {
+                  setNewTag(e.target.value);
+                  setShowTagSuggestions(e.target.value.trim().length > 0);
+                }}
+                onKeyDown={handleTagInput}
+                onFocus={() => newTag.trim() && setShowTagSuggestions(true)}
+              />
+              
+              {/* Tag suggestions dropdown */}
+              {showTagSuggestions && tagSuggestions.length > 0 && (
+                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg neo-brutal-box overflow-hidden">
+                  {tagSuggestions.map((tag, index) => (
+                    <div 
+                      key={index}
+                      className="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center"
+                      onClick={() => handleTagSuggestionClick(tag)}
+                    >
+                      <TagIcon className="h-3 w-3 mr-2" />
+                      {tag}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         

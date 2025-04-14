@@ -4,7 +4,7 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export interface Database {
   public: {
@@ -47,40 +47,6 @@ export interface Database {
           user_id?: string
         }
       }
-      tags: {
-        Row: {
-          id: number
-          name: string
-          created_at: string
-        }
-        Insert: {
-          id?: number
-          name: string
-          created_at?: string
-        }
-        Update: {
-          id?: number
-          name?: string
-          created_at?: string
-        }
-      }
-      bookmark_tags: {
-        Row: {
-          id: number
-          bookmark_id: string
-          tag_id: number
-        }
-        Insert: {
-          id?: number
-          bookmark_id: string
-          tag_id: number
-        }
-        Update: {
-          id?: number
-          bookmark_id?: string
-          tag_id?: number
-        }
-      }
       profiles: {
         Row: {
           id: string
@@ -107,22 +73,55 @@ export interface Database {
           email?: string | null
         }
       }
+      tags: {
+        Row: {
+          id: number
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          name: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          created_at?: string
+        }
+      }
+      bookmark_tags: {
+        Row: {
+          id: number
+          bookmark_id: number
+          tag_id: number
+        }
+        Insert: {
+          id?: number
+          bookmark_id: number
+          tag_id: number
+        }
+        Update: {
+          id?: number
+          bookmark_id?: number
+          tag_id?: number
+        }
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_tags_with_counts: {
-        Args: Record<string, never>
-        Returns: {
-          id: number
-          name: string
-          count: number
-        }[]
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
     }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
-} 
+}
+
+export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
+export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T] 

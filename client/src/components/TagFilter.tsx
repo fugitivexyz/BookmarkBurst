@@ -1,9 +1,9 @@
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Bookmark } from "@/lib/types";
+import { BookmarkWithTags } from "@/hooks/useBookmarks";
 
 interface TagFilterProps {
-  bookmarks: Bookmark[];
+  bookmarks: BookmarkWithTags[];
   selectedTags: string[];
   onTagSelect: (tag: string) => void;
   onTagClear: (tag: string) => void;
@@ -17,13 +17,14 @@ export function TagFilter({
   onTagClear,
   onClearAllTags,
 }: TagFilterProps) {
-  // Extract unique tags from all bookmarks
+  // Extract unique tags from all bookmarks, preferring fetchedTags over legacy tags
   const allTags = bookmarks.reduce((tags: string[], bookmark) => {
-    if (bookmark.tags && bookmark.tags.length > 0) {
-      for (const tag of bookmark.tags) {
-        if (!tags.includes(tag)) {
-          tags.push(tag);
-        }
+    // Use fetchedTags if available, fall back to legacy tags
+    const bookmarkTags = bookmark.fetchedTags || bookmark.tags || [];
+    
+    for (const tag of bookmarkTags) {
+      if (!tags.includes(tag)) {
+        tags.push(tag);
       }
     }
     return tags;
@@ -31,9 +32,11 @@ export function TagFilter({
 
   // Count bookmarks for each tag
   const tagCounts = allTags.reduce((counts: Record<string, number>, tag) => {
-    counts[tag] = bookmarks.filter(
-      bookmark => bookmark.tags && bookmark.tags.includes(tag)
-    ).length;
+    counts[tag] = bookmarks.filter(bookmark => {
+      // Use fetchedTags if available, fall back to legacy tags
+      const bookmarkTags = bookmark.fetchedTags || bookmark.tags || [];
+      return bookmarkTags.includes(tag);
+    }).length;
     return counts;
   }, {});
 

@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BookmarkCard from "./BookmarkCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBookmarks } from "@/hooks/useBookmarks";
+import { useBookmarks, type BookmarkWithTags, type InsertBookmarkInput } from "@/hooks/useBookmarks";
 import { SearchBar } from "./SearchBar";
 import { TagFilter } from "./TagFilter";
 import { ImportExport } from "./ImportExport";
@@ -34,9 +34,11 @@ export default function BookmarkManager() {
     
     // Filter by selected tags
     if (selectedTags.length > 0) {
-      result = result.filter(bookmark => 
-        bookmark.tags ? selectedTags.every(tag => bookmark.tags?.includes(tag)) : false
-      );
+      result = result.filter(bookmark => {
+        // Get the tags from fetchedTags first, then fall back to legacy tags
+        const bookmarkTags = bookmark.fetchedTags || bookmark.tags || [];
+        return selectedTags.every(tag => bookmarkTags.includes(tag));
+      });
     }
     
     // Filter by search term
@@ -46,7 +48,9 @@ export default function BookmarkManager() {
         bookmark.title.toLowerCase().includes(term) || 
         (bookmark.description && bookmark.description.toLowerCase().includes(term)) ||
         bookmark.url.toLowerCase().includes(term) ||
-        (bookmark.tags && bookmark.tags.some(tag => tag.toLowerCase().includes(term)))
+        // Search in fetchedTags first, then fall back to legacy tags
+        ((bookmark.fetchedTags || bookmark.tags) && 
+         (bookmark.fetchedTags || bookmark.tags || []).some(tag => tag.toLowerCase().includes(term)))
       );
     }
     
@@ -120,7 +124,12 @@ export default function BookmarkManager() {
   const handleImportBookmarks = async (importedBookmarks: InsertBookmark[]) => {
     // Process the imported bookmarks one by one
     for (const bookmark of importedBookmarks) {
-      await addBookmark(bookmark);
+      // Convert null tags to undefined to match InsertBookmarkInput type
+      const bookmarkInput: InsertBookmarkInput = {
+        ...bookmark,
+        tags: bookmark.tags || undefined
+      };
+      await addBookmark(bookmarkInput);
     }
     
     // Refresh the bookmarks list

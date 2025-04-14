@@ -7,7 +7,7 @@ Bookmarko is a web application for efficiently organizing, storing, and managing
 - User authentication with Supabase Auth
 - CRUD operations for bookmark management
 - Automatic metadata extraction from URLs (title, description, favicon)
-- Tagging system for organizing bookmarks
+- Advanced tagging system with suggestions and quick filtering
 - Clean and intuitive user interface built with React and Shadcn UI
 - Chrome extension for one-click bookmarking from any website
 
@@ -165,6 +165,16 @@ If the metadata extraction function fails:
 - Edit and delete functionality for existing bookmarks
 - Neo-brutalism design matching the main application's aesthetic
 - Responsive design optimized for extension popup
+
+## Recent Updates
+
+### Enhanced Tag System
+
+- Normalized database schema for efficient tag storage and retrieval
+- Tag suggestions based on recently used tags
+- Consistent tag handling between web app and browser extension
+- Quick filtering by multiple tags
+- Improved tag creation UX with autocomplete
 
 ## License
 

@@ -13,21 +13,24 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Bookmark } from "@/lib/types";
+import { BookmarkWithTags } from "@/hooks/useBookmarks";
 import { format } from "date-fns";
 
 interface BookmarkCardProps {
-  bookmark: Bookmark;
+  bookmark: BookmarkWithTags;
   onUpdate: (id: number, data: { title: string; description: string | null; tags: string[] | null }) => void;
   onDelete: (id: number) => void;
 }
 
 export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkCardProps) {
+  // Get tags from fetchedTags first, then fall back to legacy tags
+  const bookmarkTags = bookmark.fetchedTags || bookmark.tags || [];
+  
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(bookmark.title);
   const [editDescription, setEditDescription] = useState(bookmark.description || "");
-  const [editTags, setEditTags] = useState<string[]>(bookmark.tags || []);
+  const [editTags, setEditTags] = useState<string[]>(bookmarkTags);
   const [newTag, setNewTag] = useState("");
   
   const randomColorClass = () => {
@@ -48,7 +51,7 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
     // Reset to original values
     setEditTitle(bookmark.title);
     setEditDescription(bookmark.description || "");
-    setEditTags(bookmark.tags || []);
+    setEditTags(bookmarkTags);
     setIsEditing(false);
   };
 
@@ -214,9 +217,9 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
         </p>
       )}
       
-      {bookmark.tags && bookmark.tags.length > 0 && (
+      {bookmarkTags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
-          {bookmark.tags.map((tag, index) => (
+          {bookmarkTags.map((tag, index) => (
             <span 
               key={index}
               className={`inline-block px-2 py-0.5 text-xs rounded ${randomColorClass()}`}

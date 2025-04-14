@@ -4,7 +4,7 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export interface Database {
   public: {
@@ -44,6 +44,26 @@ export interface Database {
           tags?: string[] | null
         }
       }
+      profiles: {
+        Row: {
+          id: string
+          username: string
+          email: string
+          updated_at: string | null
+        }
+        Insert: {
+          id: string
+          username: string
+          email: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          username?: string
+          email?: string
+          updated_at?: string | null
+        }
+      }
       tags: {
         Row: {
           id: number
@@ -78,42 +98,21 @@ export interface Database {
           tag_id?: number
         }
       }
-      profiles: {
-        Row: {
-          id: string
-          username: string
-          email: string
-          updated_at: string | null
-        }
-        Insert: {
-          id: string
-          username: string
-          email: string
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          username?: string
-          email?: string
-          updated_at?: string | null
-        }
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_tags_with_counts: {
-        Args: Record<string, never>
-        Returns: {
-          id: number
-          name: string
-          count: number
-        }[]
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
     }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
-} 
+}
+
+export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
+export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T] 

@@ -1,71 +1,90 @@
 import { getSupabase } from './supabase';
-import { Bookmark, InsertBookmark, Metadata } from './types';
+import { Bookmark, InsertBookmark, UpdateBookmark, Metadata } from './types';
 import { getUser } from './auth';
+import { addTagsToBookmark, updateBookmarkTags, getTagsForBookmark } from './tagService';
+
+// Define input types similar to client
+type InsertBookmarkInput = InsertBookmark & { tags?: string[] | null };
+type UpdateBookmarkInput = UpdateBookmark & { tags?: string[] | null };
+
+// DB types without tags
+type InsertBookmarkDb = Omit<InsertBookmark, 'tags'>;
+type UpdateBookmarkDb = Omit<UpdateBookmark, 'tags'>;
+
+// Define BookmarkWithTags type
+export type BookmarkWithTags = Bookmark & {
+  fetchedTags?: string[];
+};
 
 // Save a bookmark to Supabase
-export async function saveBookmark(bookmark: InsertBookmark): Promise<Bookmark> {
+export async function saveBookmark(bookmarkInput: InsertBookmarkInput): Promise<Bookmark> {
   const user = await getUser();
-  
-  if (!user) {
-    console.error('User not authenticated when attempting to save bookmark');
-    throw new Error('User not authenticated');
-  }
+  if (!user) throw new Error('User not authenticated');
   
   const supabase = await getSupabase();
-  if (!supabase) {
-    console.error('Supabase client not initialized when attempting to save bookmark');
-    throw new Error('Supabase client not initialized');
-  }
+  if (!supabase) throw new Error('Supabase client not initialized');
   
-  console.log('Saving bookmark for user:', user.id);
-  const { data, error } = await supabase
+  const { tags, ...bookmarkData } = bookmarkInput;
+  
+  // 1. Insert bookmark - add user_id directly to the insert operation
+  const { data: newBookmark, error: insertError } = await supabase
     .from('bookmarks')
     .insert({
-      ...bookmark,
-      user_id: user.id,
+      ...bookmarkData,
+      user_id: user.id
     })
     .select()
     .single();
   
-  if (error) {
-    console.error('Error saving bookmark:', error.message, 'Details:', error.details, 'Hint:', error.hint, 'Code:', error.code);
-    throw error;
+  if (insertError || !newBookmark) {
+    console.error('Error saving bookmark:', insertError);
+    throw insertError || new Error('Failed to save bookmark');
   }
   
-  console.log('Bookmark saved successfully:', data);
-  return data;
+  // 2. Add tags
+  if (tags && tags.length > 0) {
+    const tagsAdded = await addTagsToBookmark(parseInt(newBookmark.id), tags);
+    if (!tagsAdded) {
+      console.warn(`Bookmark ${newBookmark.id} saved, but failed to add tags.`);
+    }
+  }
+  
+  console.log('Bookmark saved successfully:', newBookmark);
+  return newBookmark;
 }
 
-// Get recent bookmarks
-export async function getRecentBookmarks(limit: number = 5): Promise<Bookmark[]> {
+// Get recent bookmarks with tags
+export async function getRecentBookmarks(limit: number = 5): Promise<BookmarkWithTags[]> {
   const user = await getUser();
-  
-  if (!user) {
-    console.log('User not authenticated, returning empty bookmark list');
-    return [];
-  }
+  if (!user) return [];
   
   const supabase = await getSupabase();
-  if (!supabase) {
-    console.log('Supabase client not initialized, returning empty bookmark list');
-    return [];
-  }
+  if (!supabase) return [];
   
-  console.log('Fetching recent bookmarks for user:', user.id);
-  const { data, error } = await supabase
+  const { data: bookmarksData, error: bookmarksError } = await supabase
     .from('bookmarks')
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(limit);
   
-  if (error) {
-    console.error('Error fetching recent bookmarks:', error.message, 'Details:', error.details, 'Hint:', error.hint, 'Code:', error.code);
+  if (bookmarksError) {
+    console.error('Error fetching recent bookmarks:', bookmarksError);
     return [];
   }
   
-  console.log('Fetched bookmarks:', data?.length || 0, 'items');
-  return data || [];
+  if (!bookmarksData) return [];
+
+  // Fetch tags for each bookmark
+  const bookmarksWithTags = await Promise.all(
+    bookmarksData.map(async (bookmark: Bookmark) => {
+      const tags = await getTagsForBookmark(parseInt(bookmark.id));
+      return { ...bookmark, fetchedTags: tags };
+    })
+  );
+  
+  console.log('Fetched bookmarks:', bookmarksWithTags?.length || 0, 'items');
+  return bookmarksWithTags || [];
 }
 
 // Check if a URL is already bookmarked
@@ -101,13 +120,12 @@ export async function isUrlBookmarked(url: string): Promise<boolean> {
 }
 
 // Prepare bookmark data from metadata
-export function prepareBookmarkFromMetadata(metadata: Metadata): InsertBookmark {
+export function prepareBookmarkFromMetadata(metadata: Metadata): InsertBookmarkInput {
   return {
     url: metadata.metadata?.url || '',
     title: metadata.title || 'Untitled Bookmark',
     description: metadata.description,
     favicon: metadata.favicon,
-    tags: null,
     metadata: metadata.metadata || {}
   };
 }
@@ -137,29 +155,70 @@ export async function deleteBookmark(bookmarkId: string): Promise<void> {
 }
 
 // Update a bookmark
-export async function updateBookmark(bookmarkId: string, updates: Partial<InsertBookmark>): Promise<Bookmark> {
+export async function updateBookmark(bookmarkId: string, updates: UpdateBookmarkInput): Promise<Bookmark> {
   const user = await getUser();
-  
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
+  if (!user) throw new Error('User not authenticated');
   
   const supabase = await getSupabase();
-  if (!supabase) {
-    throw new Error('Supabase client not initialized');
+  if (!supabase) throw new Error('Supabase client not initialized');
+
+  const { tags, ...bookmarkData } = updates;
+  const bookmarkToUpdate: UpdateBookmarkDb = bookmarkData;
+
+  // 1. Update core data
+  let updateError: Error | null = null;
+  let updatedBookmark: Bookmark | null = null;
+  if (Object.keys(bookmarkToUpdate).length > 0) {
+    const { data, error } = await supabase
+      .from('bookmarks')
+      .update(bookmarkToUpdate)
+      .eq('id', bookmarkId)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating bookmark data:', error);
+      updateError = error;
+    } else {
+      updatedBookmark = data;
+    }
+  }
+
+  // 2. Update tags
+  let tagsUpdateError = false;
+  if (tags !== undefined) { 
+    const tagsUpdated = await updateBookmarkTags(parseInt(bookmarkId), tags || []);
+    if (!tagsUpdated) {
+      console.warn(`Failed to update tags for bookmark ${bookmarkId}.`);
+      tagsUpdateError = true;
+    }
+  }
+
+  // Handle errors
+  if (updateError || tagsUpdateError) {
+    throw updateError || new Error('Failed to fully update bookmark, tags might be inconsistent.');
   }
   
-  const { data, error } = await supabase
-    .from('bookmarks')
-    .update(updates)
-    .eq('id', bookmarkId)
-    .eq('user_id', user.id)
-    .select()
-    .single();
-  
-  if (error) {
-    throw error;
+  // If only tags were updated, fetch the bookmark data to return it
+  if (!updatedBookmark) {
+     const { data, error } = await supabase
+      .from('bookmarks')
+      .select('*')
+      .eq('id', bookmarkId)
+      .eq('user_id', user.id)
+      .single();
+      if (error || !data) {
+          console.error("Failed to fetch bookmark after tag update:", error);
+          throw new Error("Bookmark tag update succeeded, but failed to fetch the updated bookmark data.") 
+      }
+      updatedBookmark = data;
   }
-  
-  return data;
+
+  // Type is now guaranteed non-null
+  // Add an explicit assertion or check, although logic flow ensures it
+  if (!updatedBookmark) { 
+      throw new Error("Unexpected null bookmark after update.");
+  }
+  return updatedBookmark;
 } 
