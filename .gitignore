@@ -78,3 +78,8 @@ vite.config.ts.*
 **/node_modules/
 
 .windsurfrules
+memory-bank
+
+# Playwright
+/playwright-report/
+/test-results/

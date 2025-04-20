@@ -145,4 +145,10 @@ const onSubmit = (data) => {
 ### API Security
 - CORS protection
 - Rate limiting
-- Request validation 
+- Request validation
+
+## Testing Strategy
+- **Primary Approach**: End-to-End (E2E) testing using Playwright.
+- **Scope**: Cover critical user flows such as authentication, bookmark CRUD operations (Create, Read, Update, Delete), tagging, and search functionality for both the web application and the Chrome extension.
+- **Organization**: Tests are located in the root `tests/` directory, organized by feature (e.g., `auth.spec.ts`, `bookmarks.spec.ts`).
+- **Pattern**: Aim to use the Page Object Model (POM) pattern for better test maintainability as the suite grows. 

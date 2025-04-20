@@ -114,17 +114,18 @@
 ## Testing Status
 
 ### Unit Tests
-- Basic component tests implemented
+- Basic component tests implemented (Consider migrating relevant ones to Playwright component tests if needed)
 - Form validation tests in progress
-- Authentication flow tests needed
+- Authentication flow tests needed (Will be covered by Playwright E2E)
 
 ### Integration Tests
-- API communication tests planned
-- Authentication flow tests needed
+- API communication tests planned (Will be covered by Playwright E2E)
+- Authentication flow tests needed (Will be covered by Playwright E2E)
 
 ### End-to-End Tests
-- Core user flows to be implemented
-- Extension functionality tests needed
+- 🔄 Setting up Playwright infrastructure
+- Core user flows (auth, bookmarks, tags, search) to be implemented using Playwright
+- Extension functionality tests needed using Playwright
 
 ## Documentation
 

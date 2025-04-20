@@ -167,4 +167,9 @@
 - Permission justifications 
 
 ### Serverless Functions
-- **Metadata Extraction**: Now uses Supabase Edge Functions for all environments (previously Cloudflare Functions) 
+- **Metadata Extraction**: Now uses Supabase Edge Functions for all environments (previously Cloudflare Functions)
+
+## Testing
+- **Framework**: Playwright for End-to-End (E2E) testing.
+- **Focus**: Testing critical user flows across the application and Chrome extension.
+- **Runner**: `@playwright/test` 

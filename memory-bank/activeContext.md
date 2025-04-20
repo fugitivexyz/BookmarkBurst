@@ -45,12 +45,11 @@ The current development focus is on post-launch activities for the Chrome extens
 ## Next Actions
 
 ### Immediate (Current Sprint)
-1. **Implement normalized tags schema (database migration & code updates).**
-2. Set up a system for collecting user feedback from the Chrome Web Store.
-3. Monitor performance metrics and error logs for the extension.
-4. Address any immediate bugs or issues reported by users.
-5. Develop a marketing plan to promote the extension.
-6. Engage with early users to gather detailed feedback.
+1. **Set up Playwright testing infrastructure (install, configure, create basic test).**
+2. Monitor performance metrics and error logs for the extension.
+3. Address any immediate bugs or issues reported by users.
+4. Develop a marketing plan to promote the extension.
+5. Engage with early users to gather detailed feedback.
 
 ### Short-term (Next Sprint)
 1. Implement user preferences system.
