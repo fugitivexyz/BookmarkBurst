@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ExternalLink, Pencil, Trash2, X, Save, Clock, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,26 +13,44 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { BookmarkWithTags } from "@/hooks/useBookmarks";
+import { BaseBookmark } from "@/hooks/useBookmarks";
+import { getTagsForBookmark } from "@/lib/services/tagService";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 
 interface BookmarkCardProps {
-  bookmark: BookmarkWithTags;
+  bookmark: BaseBookmark;
   onUpdate: (id: number, data: { title: string; description: string | null; tags: string[] | null }) => void;
   onDelete: (id: number) => void;
 }
 
 export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkCardProps) {
-  // Get tags from fetchedTags first, then fall back to legacy tags
-  const bookmarkTags = bookmark.fetchedTags || bookmark.tags || [];
-  
+  // Fetch tags for this specific bookmark
+  const { data: bookmarkTags = [], isLoading: tagsLoading, error: tagsError } = useQuery({
+    queryKey: ['bookmark-tags', bookmark.id],
+    queryFn: async () => {
+      console.log(`Fetching tags for bookmark ID: ${bookmark.id}`);
+      const tags = await getTagsForBookmark(bookmark.id);
+      console.log(`Tags fetched for bookmark ID ${bookmark.id}:`, tags);
+      return tags;
+    },
+    enabled: !!bookmark.id, // Only run if bookmark.id is available
+    staleTime: 5 * 60 * 1000, // Cache tags for 5 minutes
+  });
+
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(bookmark.title);
   const [editDescription, setEditDescription] = useState(bookmark.description || "");
-  const [editTags, setEditTags] = useState<string[]>(bookmarkTags);
+  const [editTags, setEditTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
-  
+
+  useEffect(() => {
+    if (bookmarkTags && bookmarkTags.length > 0) {
+      setEditTags(bookmarkTags);
+    }
+  }, [bookmarkTags]);
+
   const randomColorClass = () => {
     const colors = ["bg-primary", "bg-secondary", "bg-accent text-white"];
     return colors[Math.floor(Math.random() * colors.length)];
@@ -48,7 +66,6 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
   };
 
   const handleCancelEdit = () => {
-    // Reset to original values
     setEditTitle(bookmark.title);
     setEditDescription(bookmark.description || "");
     setEditTags(bookmarkTags);
@@ -87,7 +104,6 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
     return format(date, "MMM d, yyyy");
   };
 
-  // URL domain display
   const getDomain = (url: string) => {
     try {
       const domain = new URL(url).hostname.replace('www.', '');
@@ -100,7 +116,6 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
   if (isEditing) {
     return (
       <div className="neo-brutal-box bg-white p-4 shadow-lg relative">
-        {/* Edit form */}
         <div className="space-y-4">
           <div>
             <label className="block font-bold mb-1 text-sm">Title</label>
@@ -185,7 +200,6 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
             alt="Site favicon" 
             className="w-6 h-6 mr-2 border border-gray-200"
             onError={(e) => {
-              // If favicon fails to load, hide it and use a fallback
               (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
@@ -217,18 +231,34 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
         </p>
       )}
       
-      {bookmarkTags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {bookmarkTags.map((tag, index) => (
-            <span 
-              key={index}
-              className={`inline-block px-2 py-0.5 text-xs rounded ${randomColorClass()}`}
-            >
-              {tag}
-            </span>
-          ))}
+      {tagsLoading ? (
+        <div className="flex items-center space-x-1 text-xs text-gray-500">
+          <span className="mr-1">|</span>
+          <Tag className="h-3 w-3 mr-1" />
+          <span className="text-xs">Tags:</span>
+          <span className="text-xs text-gray-500 italic">Loading tags...</span>
         </div>
-      )}
+      ) : tagsError ? (
+        <div className="flex items-center space-x-1 text-xs text-gray-500">
+          <span className="mr-1">|</span>
+          <Tag className="h-3 w-3 mr-1" />
+          <span className="text-xs">Tags:</span>
+          <span className="text-xs text-red-500 italic">Error loading tags</span>
+        </div>
+      ) : bookmarkTags.length > 0 ? (
+        <div className="flex items-center space-x-1 text-xs text-gray-500 mb-3"> 
+          <span className="mr-1">|</span>
+          <Tag className="h-3 w-3 mr-1" />
+          <span className="text-xs">Tags:</span>
+          <div className="flex flex-wrap gap-1 ml-1">
+            {bookmarkTags.map((tag, index) => (
+              <span key={index} className="bg-gray-100 px-2 py-0.5 rounded-md text-xs">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
       
       <div className="flex justify-between items-center mt-auto pt-2 text-xs text-gray-500">
         <span className="flex items-center">
@@ -256,7 +286,6 @@ export default function BookmarkCard({ bookmark, onUpdate, onDelete }: BookmarkC
         </div>
       </div>
       
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="neo-brutal-box no-transitions">
           <AlertDialogHeader>

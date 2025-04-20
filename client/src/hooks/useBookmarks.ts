@@ -12,22 +12,20 @@ import {
   getAllTags 
 } from "@/lib/services/tagService";
 
-type Bookmark = Database['public']['Tables']['bookmarks']['Row'];
-export type InsertBookmarkInput = Omit<Database['public']['Tables']['bookmarks']['Insert'], 'user_id'> & {
+type BookmarkRow = Database['public']['Tables']['bookmarks']['Row'];
+type InsertBookmarkDb = Database['public']['Tables']['bookmarks']['Insert'];
+type UpdateBookmarkDb = Database['public']['Tables']['bookmarks']['Update'];
+
+export type BaseBookmark = Omit<BookmarkRow, 'tags'>;
+
+export type InsertBookmarkInput = Omit<InsertBookmarkDb, 'user_id'> & {
   tags?: string[];
 };
-export type UpdateBookmarkInput = Database['public']['Tables']['bookmarks']['Update'] & {
+export type UpdateBookmarkInput = UpdateBookmarkDb & {
   tags?: string[] | null;
 };
 
-type InsertBookmarkDb = Omit<Database['public']['Tables']['bookmarks']['Insert'], 'tags'>;
-type UpdateBookmarkDb = Omit<Database['public']['Tables']['bookmarks']['Update'], 'tags'>;
-
 const BOOKMARKS_QUERY_KEY = "bookmarks";
-
-export type BookmarkWithTags = Bookmark & {
-  fetchedTags?: string[];
-};
 
 export function useBookmarks() {
   const { user } = useAuth();
@@ -36,27 +34,19 @@ export function useBookmarks() {
     data: bookmarks = [],
     isLoading,
     error,
-  } = useQuery<BookmarkWithTags[]>({
+  } = useQuery<BaseBookmark[]>({
     queryKey: [BOOKMARKS_QUERY_KEY],
     queryFn: async () => {
       if (!user) return [];
       
       const { data: bookmarksData, error: bookmarksError } = await supabase
         .from('bookmarks')
-        .select('*')
+        .select('id, user_id, url, title, description, favicon, created_at, metadata')
         .order('created_at', { ascending: false });
       
       if (bookmarksError) throw bookmarksError;
-      if (!bookmarksData) return [];
-
-      const bookmarksWithTags = await Promise.all(
-        bookmarksData.map(async (bookmark) => {
-          const tags = await getTagsForBookmark(bookmark.id);
-          return { ...bookmark, fetchedTags: tags };
-        })
-      );
-
-      return bookmarksWithTags || [];
+      
+      return bookmarksData || [];
     },
     enabled: !!user,
   });
@@ -140,7 +130,8 @@ export function useBookmarks() {
       }
 
       if (tags && tags.length > 0) {
-        const tagsAdded = await addTagsToBookmark(newBookmark.id, tags);
+        // Pass user.id to addTagsToBookmark
+        const tagsAdded = await addTagsToBookmark(user.id, newBookmark.id, tags);
         if (!tagsAdded) {
           console.warn(`Bookmark ${newBookmark.id} created, but failed to add tags.`);
         }
@@ -187,7 +178,8 @@ export function useBookmarks() {
 
       let tagsUpdateError = false;
       if (tags !== undefined) {
-        const tagsUpdated = await updateBookmarkTags(id, tags || []);
+        // Pass user.id to updateBookmarkTags
+        const tagsUpdated = await updateBookmarkTags(user.id, id, tags || []);
         if (!tagsUpdated) {
           console.warn(`Failed to update tags for bookmark ${id}.`);
           tagsUpdateError = true;
@@ -253,9 +245,15 @@ export function useBookmarks() {
     queryKey: ['recent-tags'],
     queryFn: async () => {
       if (!user) return [];
-      return getRecentTags(10); // Get 10 most recent tags
+      console.log('[useBookmarks] Fetching recent tags for user:', user.id);
+      // Pass user.id first, then the limit
+      const tags = await getRecentTags(user.id, 10);
+      console.log('[useBookmarks] Recent tags fetched:', tags);
+      return tags;
     },
     enabled: !!user,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   return {

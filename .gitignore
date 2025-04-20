@@ -52,8 +52,6 @@ lerna-debug.log*
 
 # Cursor and memory bank files
 .cursor
-.memory-bank
-memory-bank
 .cursor-lockfile
 
 # Cache
@@ -73,3 +71,10 @@ tsconfig.tsbuildinfo
 server/public
 vite.config.ts.*
 *.tar.gz
+*.zip
+# Ignore dist directories everywhere
+**/dist/
+# Ignore node_modules everywhere
+**/node_modules/
+
+.windsurfrules

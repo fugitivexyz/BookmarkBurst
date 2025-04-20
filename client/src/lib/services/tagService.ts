@@ -5,11 +5,12 @@ type PublicSchema = Database['public'];
 type Tag = PublicSchema['Tables']['tags']['Row'];
 type BookmarkTag = PublicSchema['Tables']['bookmark_tags']['Row'];
 
-// Get all available tags
-export async function getAllTags(): Promise<Tag[]> {
+// Get all available tags for the current user
+export async function getAllTags(userId: string): Promise<Tag[]> {
   const { data, error } = await supabase
     .from('tags')
     .select('*')
+    .eq('user_id', userId) // Filter by user
     .order('name');
   
   if (error) {
@@ -20,110 +21,204 @@ export async function getAllTags(): Promise<Tag[]> {
   return data || [];
 }
 
-// Get tags for a specific bookmark
+// Get tags for a specific bookmark (RLS handles user filtering implicitly)
 export async function getTagsForBookmark(bookmarkId: number): Promise<string[]> {
+  console.log(`[getTagsForBookmark] Starting fetch for bookmark ID: ${bookmarkId}`);
+  
+  // Rewritten to query tables directly instead of using RPC
   const { data, error } = await supabase
-    .rpc('get_bookmark_tags', { bookmark_id: bookmarkId });
+    .from('bookmark_tags')
+    .select('tags ( id, name )') // Select name from the related tags table
+    .eq('bookmark_id', bookmarkId);
+  
+  console.log(`[getTagsForBookmark] Raw data for bookmark ID ${bookmarkId}:`, data);
   
   if (error) {
     console.error(`Error fetching tags for bookmark ${bookmarkId}:`, error);
     return [];
   }
   
-  // The function returns an array of objects like { tag_name: 'sometag' }
-  return data ? data.map((row: { tag_name: string }) => row.tag_name) : [];
+  // Data format is [{ tags: { name: 'tag1' } }, { tags: { name: 'tag2' } }]
+  const tagNames = data ? data.map(item => item.tags?.name).filter((name): name is string => !!name) : [];
+  console.log(`[getTagsForBookmark] Extracted tag names for bookmark ID ${bookmarkId}:`, tagNames);
+  
+  return tagNames;
 }
 
-// Add tags to a bookmark
-export async function addTagsToBookmark(bookmarkId: number, tagNames: string[]): Promise<boolean> {
+// Add tags to a bookmark for a specific user
+export async function addTagsToBookmark(userId: string, bookmarkId: number, tagNames: string[]): Promise<boolean> {
+  console.log('Adding tags to bookmark', { userId, bookmarkId, tagNames });
+  
   if (!tagNames || tagNames.length === 0) {
+    console.log('No tags to add');
     return true; // Nothing to add
   }
   
   const normalizedTags = tagNames.map(name => name.trim().toLowerCase()).filter(Boolean);
   if (normalizedTags.length === 0) {
+    console.log('No normalized tags to add');
     return true;
   }
 
-  // 1. Find which tags already exist
-  const { data: existingTagsData, error: fetchExistingError } = await supabase
-    .from('tags')
-    .select('*')
-    .in('name', normalizedTags);
+  console.log('Normalized tags', normalizedTags);
 
-  if (fetchExistingError) {
-    console.error('Error fetching existing tags:', fetchExistingError);
+  try {
+    // 1. Find ALL existing tags for this user - not just the ones in normalizedTags
+    // This prevents race conditions by getting a complete picture before any insertions
+    const { data: allUserTags, error: fetchAllError } = await supabase
+      .from('tags')
+      .select('id, name')
+      .eq('user_id', userId);
+    
+    if (fetchAllError) {
+      console.error('Error fetching user tags:', fetchAllError);
+      return false;
+    }
+    
+    console.log('All user tags', allUserTags);
+    
+    // Create a case-insensitive map of existing tags
+    const existingTagMap = new Map();
+    (allUserTags || []).forEach(tag => {
+      console.log(`Adding tag to map: ${tag.name.toLowerCase()} -> ${tag.id}`);
+      existingTagMap.set(tag.name.toLowerCase(), tag.id);
+    });
+    
+    console.log('Existing tag map', Object.fromEntries(existingTagMap));
+    
+    // 2. Determine which tags need to be created (don't exist for this user)
+    // normalizedTags are already lowercase from earlier
+    const tagsToCreate = [];
+    const existingTagIds = [];
+    
+    // First separate existing tags from tags to create
+    for (const name of normalizedTags) {
+      console.log(`Checking if tag "${name}" exists in map with keys: ${Array.from(existingTagMap.keys()).join(', ')}`);
+      
+      if (existingTagMap.has(name)) {
+        const id = existingTagMap.get(name);
+        console.log(`Found existing tag: ${name} -> ID: ${id}`);
+        existingTagIds.push(id);
+      } else {
+        console.log(`Tag "${name}" needs to be created`);
+        tagsToCreate.push(name);
+      }
+    }
+    
+    console.log('Tags to create', tagsToCreate);
+    console.log('Existing tag IDs collected', existingTagIds);
+    
+    // 3. Create new tags only if they don't already exist
+    let allTagIds = [...existingTagIds]; // Start with existing tag IDs
+    
+    // Insert any new tags
+    if (tagsToCreate.length > 0) {
+      // Include userId in insertion
+      const tagInsertions = tagsToCreate.map(name => ({ name, user_id: userId })); 
+      console.log('Inserting new tags', tagInsertions);
+      
+      try {
+        const { data: newTags, error: insertError } = await supabase
+          .from('tags')
+          .insert(tagInsertions)
+          .select('id, name');
+        
+        console.log('Insert result', { newTags, insertError });
+        
+        if (insertError) {
+          // If we still get a constraint error (very rare race condition), 
+          // fetch the tags again to get their IDs
+          if (insertError.code === '23505') {
+            console.log('Constraint violation, fetching newly created tags');
+            // Another session might have inserted these tags in the meantime
+            // Fetch the newly created tags by name
+            const { data: justCreatedTags, error: fetchNewError } = await supabase
+              .from('tags')
+              .select('id, name')
+              .eq('user_id', userId)
+              .in('name', tagsToCreate.map(t => t.toLowerCase()));
+            
+            console.log('Fetch after constraint', { justCreatedTags, fetchNewError });
+            
+            if (fetchNewError) {
+              console.error('Error fetching newly created tags:', fetchNewError);
+              return false;
+            }
+            
+            if (justCreatedTags && justCreatedTags.length > 0) {
+              // Add these tag IDs to our collection
+              justCreatedTags.forEach(tag => {
+                console.log(`Adding tag ID from constraint recovery: ${tag.id} (${tag.name})`);
+                allTagIds.push(tag.id);
+              });
+            } else {
+              console.warn('No tags returned after constraint recovery');
+            }
+          } else {
+            console.error('Error inserting new tags:', insertError);
+            return false;
+          }
+        } else if (newTags && newTags.length > 0) {
+          // Add the new tag IDs to our collection
+          console.log(`Adding ${newTags.length} new tag IDs`, newTags);
+          newTags.forEach(tag => {
+            console.log(`Adding new tag ID: ${tag.id} (${tag.name})`);
+            allTagIds.push(tag.id);
+          });
+        } else {
+          console.warn('No new tags returned from insert operation');
+        }
+      } catch (err) {
+        console.error('Unexpected error during tag insertion:', err);
+        return false;
+      }
+    }
+    
+    console.log('All tag IDs to link', allTagIds);
+    
+    if (allTagIds.length === 0) {
+      console.warn("No valid tag IDs found to link.");
+      return true; // Not necessarily a failure
+    }
+    
+    // 4. Create the bookmark-tag connections
+    const tagConnections = allTagIds.map(tagId => ({ 
+      bookmark_id: bookmarkId,
+      tag_id: tagId,
+      user_id: userId
+    }));
+    
+    console.log('Tag connections to create', tagConnections);
+    
+    // Insert connections with ON CONFLICT DO NOTHING approach
+    try {
+      const { error: linkError } = await supabase
+        .from('bookmark_tags')
+        .upsert(tagConnections, { 
+          onConflict: 'bookmark_id,tag_id', 
+          ignoreDuplicates: true 
+        });
+      
+      console.log('Link result', { linkError });
+      
+      if (linkError && linkError.code !== '23505') { // Ignore unique constraint violations
+        console.error('Error linking tags to bookmark:', linkError);
+        return false;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Unexpected error linking tags to bookmark:', err);
+      return false;
+    }
+  } catch (error) {
+    console.error('Unexpected error in addTagsToBookmark:', error);
     return false;
   }
-  
-  const existingTagNames = existingTagsData?.map(tag => tag.name) || [];
-  const tagsToCreate = normalizedTags.filter(name => !existingTagNames.includes(name));
-
-  // 2. Create tags that don't exist
-  let newTagsData: Tag[] = [];
-  if (tagsToCreate.length > 0) {
-    const tagInsertions = tagsToCreate.map(name => ({ name }));
-    const { data: insertedTags, error: insertTagsError } = await supabase
-      .from('tags')
-      .insert(tagInsertions)
-      .select('*');
-
-    if (insertTagsError) {
-      // It's possible another process inserted the tag between our check and insert
-      // We might fetch again or just proceed cautiously
-      console.warn('Error inserting new tags (might be a conflict):', insertTagsError);
-      // Attempt to fetch again to include potentially conflicted tags
-      const { data: allTagsData, error: fetchAllError } = await supabase
-        .from('tags')
-        .select('*')
-        .in('name', normalizedTags);
-      if (fetchAllError || !allTagsData) {
-          console.error('Failed to fetch tag IDs after potential conflict', fetchAllError)
-          return false;
-      }
-      newTagsData = allTagsData || [];
-    } else {
-        newTagsData = insertedTags || [];
-    }
-  }
-
-  // 3. Combine existing and newly created tag IDs
-  const allRelevantTags = [...(existingTagsData || []), ...newTagsData];
-  const tagIdsToLink = allRelevantTags.map(tag => tag.id);
-
-  if (tagIdsToLink.length === 0) {
-      console.warn("No valid tag IDs found to link.")
-      return true; // Or false depending on desired strictness
-  }
-  
-  // 4. Create the bookmark-tag connections, ignoring conflicts
-  const tagConnections = tagIdsToLink.map(tagId => ({
-    bookmark_id: bookmarkId,
-    tag_id: tagId
-  }));
-  
-  // Insert connections - database UNIQUE constraint handles conflicts
-  const { error: linkTagsError } = await supabase
-    .from('bookmark_tags')
-    .insert(tagConnections)
-    // We removed .onConflict() - let DB handle it.
-    // This might throw an error if a conflict occurs, which we might want to catch depending on requirements.
-
-  if (linkTagsError) {
-    // Error 23505 is unique_violation - we can ignore this specific error
-    if (linkTagsError.code === '23505') {
-        console.log("Ignoring unique violation error during bookmark_tags insert.");
-    } else {
-        console.error('Error linking tags to bookmark:', linkTagsError);
-        return false;
-    }
-  }
-  
-  return true;
 }
 
-// Remove tags from a bookmark (by tag name)
-export async function removeTagsFromBookmark(bookmarkId: number, tagNames: string[]): Promise<boolean> {
+// Remove tags from a bookmark for a specific user
+export async function removeTagsFromBookmark(userId: string, bookmarkId: number, tagNames: string[]): Promise<boolean> {
     if (!tagNames || tagNames.length === 0) {
       return true; // Nothing to remove
     }
@@ -133,24 +228,26 @@ export async function removeTagsFromBookmark(bookmarkId: number, tagNames: strin
       return true;
     }
 
-    // Find the tag IDs to remove
+    // Find the tag IDs to remove for this user
     const { data: tagData, error: fetchTagsError } = await supabase
       .from('tags')
       .select('id')
+      .eq('user_id', userId) // Filter by user
       .in('name', normalizedTags);
 
     if (fetchTagsError || !tagData || tagData.length === 0) {
-      console.error('Error fetching tag IDs for removal or tags not found:', fetchTagsError);
-      // If tags don't exist, consider the removal successful for those tags
+      console.warn('Error fetching tag IDs for removal or tags not found for user:', fetchTagsError);
+      // If tags don't exist for user, consider removal successful for those tags
       return !fetchTagsError; 
     }
 
     const tagIdsToRemove = tagData.map(tag => tag.id);
 
-    // Remove the connections
+    // Remove the connections for this user
     const { error: deleteError } = await supabase
       .from('bookmark_tags')
       .delete()
+      .eq('user_id', userId) // Filter by user
       .eq('bookmark_id', bookmarkId)
       .in('tag_id', tagIdsToRemove);
 
@@ -162,11 +259,12 @@ export async function removeTagsFromBookmark(bookmarkId: number, tagNames: strin
     return true;
 }
 
-// Get most recently used tags
-export async function getRecentTags(limit: number = 5): Promise<string[]> {
+// Get most recently used tags for the current user
+export async function getRecentTags(userId: string, limit: number = 5): Promise<string[]> {
   const { data, error } = await supabase
     .from('tags')
     .select('name')
+    .eq('user_id', userId) // Filter by user
     .order('created_at', { ascending: false })
     .limit(limit);
   
@@ -178,12 +276,13 @@ export async function getRecentTags(limit: number = 5): Promise<string[]> {
   return data ? data.map(tag => tag.name) : [];
 }
 
-// Update all tags for a bookmark (replace existing tags)
-export async function updateBookmarkTags(bookmarkId: number, tagNames: string[]): Promise<boolean> {
-  // First remove all existing tag connections for this bookmark
+// Update all tags for a bookmark for a specific user
+export async function updateBookmarkTags(userId: string, bookmarkId: number, tagNames: string[]): Promise<boolean> {
+  // First remove all existing tag connections for this user and bookmark
   const { error: deleteError } = await supabase
     .from('bookmark_tags')
     .delete()
+    .eq('user_id', userId) // Filter by user
     .eq('bookmark_id', bookmarkId);
 
   if (deleteError) {
@@ -191,11 +290,11 @@ export async function updateBookmarkTags(bookmarkId: number, tagNames: string[])
     return false;
   }
   
-  // Then add the new tags
+  // Then add the new tags (addTagsToBookmark already includes userId)
   if (tagNames && tagNames.length > 0) {
-    return await addTagsToBookmark(bookmarkId, tagNames);
+    return await addTagsToBookmark(userId, bookmarkId, tagNames);
   }
   
   // If tagNames is empty or null, we just cleared them, so return true
   return true;
-} 
+}

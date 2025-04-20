@@ -3,12 +3,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BookmarkCard from "./BookmarkCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBookmarks, type BookmarkWithTags, type InsertBookmarkInput } from "@/hooks/useBookmarks";
+import { useBookmarks, type InsertBookmarkInput, type BaseBookmark } from "@/hooks/useBookmarks";
 import { SearchBar } from "./SearchBar";
-import { TagFilter } from "./TagFilter";
 import { ImportExport } from "./ImportExport";
 import { SortOptions, type SortField, type SortOrder } from "./SortOptions";
-import { Bookmark, InsertBookmark } from "@/lib/types";
+import { InsertBookmark } from "@/lib/types";
 import { queryClient } from "@/lib/queryClient";
 
 export default function BookmarkManager() {
@@ -21,7 +20,6 @@ export default function BookmarkManager() {
   } = useBookmarks();
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -32,25 +30,13 @@ export default function BookmarkManager() {
   const filteredBookmarks = useMemo(() => {
     let result = [...bookmarks];
     
-    // Filter by selected tags
-    if (selectedTags.length > 0) {
-      result = result.filter(bookmark => {
-        // Get the tags from fetchedTags first, then fall back to legacy tags
-        const bookmarkTags = bookmark.fetchedTags || bookmark.tags || [];
-        return selectedTags.every(tag => bookmarkTags.includes(tag));
-      });
-    }
-    
     // Filter by search term
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(bookmark => 
         bookmark.title.toLowerCase().includes(term) || 
         (bookmark.description && bookmark.description.toLowerCase().includes(term)) ||
-        bookmark.url.toLowerCase().includes(term) ||
-        // Search in fetchedTags first, then fall back to legacy tags
-        ((bookmark.fetchedTags || bookmark.tags) && 
-         (bookmark.fetchedTags || bookmark.tags || []).some(tag => tag.toLowerCase().includes(term)))
+        bookmark.url.toLowerCase().includes(term)
       );
     }
     
@@ -77,7 +63,7 @@ export default function BookmarkManager() {
     });
     
     return result;
-  }, [bookmarks, selectedTags, searchTerm, sortField, sortOrder]);
+  }, [bookmarks, searchTerm, sortField, sortOrder]);
   
   // Pagination
   const totalPages = Math.ceil(filteredBookmarks.length / ITEMS_PER_PAGE);
@@ -89,23 +75,6 @@ export default function BookmarkManager() {
   const handleSearchChange = (term: string) => {
     setSearchTerm(term);
     setCurrentPage(1); // Reset to first page on search change
-  };
-  
-  const handleTagSelect = (tag: string) => {
-    if (!selectedTags.includes(tag)) {
-      setSelectedTags([...selectedTags, tag]);
-      setCurrentPage(1); // Reset to first page on tag change
-    }
-  };
-  
-  const handleTagClear = (tag: string) => {
-    setSelectedTags(selectedTags.filter(t => t !== tag));
-    setCurrentPage(1);
-  };
-  
-  const handleClearAllTags = () => {
-    setSelectedTags([]);
-    setCurrentPage(1);
   };
   
   const handleSort = (field: SortField, order: SortOrder) => {
@@ -154,24 +123,13 @@ export default function BookmarkManager() {
         onSearchChange={handleSearchChange} 
       />
       
-      <div className="flex flex-col md:flex-row gap-6 mb-6">
+      <div className="flex gap-6 mb-6">
         {/* Sort options */}
         <div className="flex-1">
           <SortOptions 
             sortField={sortField} 
             sortOrder={sortOrder} 
             onSort={handleSort} 
-          />
-        </div>
-        
-        {/* Tag filter */}
-        <div className="flex-1">
-          <TagFilter 
-            bookmarks={bookmarks}
-            selectedTags={selectedTags}
-            onTagSelect={handleTagSelect}
-            onTagClear={handleTagClear}
-            onClearAllTags={handleClearAllTags}
           />
         </div>
       </div>
@@ -215,8 +173,8 @@ export default function BookmarkManager() {
         <div className="text-center py-12 neo-brutal-box bg-white">
           <h3 className="text-xl font-space font-bold mb-2">No bookmarks found</h3>
           <p className="text-gray-600">
-            {searchTerm || selectedTags.length > 0
-              ? "Try changing your search or filter settings" 
+            {searchTerm
+              ? "Try changing your search settings" 
               : "Add your first bookmark using the form above"}
           </p>
         </div>

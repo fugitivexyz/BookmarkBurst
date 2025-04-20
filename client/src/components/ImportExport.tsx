@@ -9,11 +9,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Bookmark, InsertBookmark } from '@/lib/types';
+import { InsertBookmark } from '@/lib/types';
+import { BaseBookmark } from '@/hooks/useBookmarks';
 import { useToast } from '@/hooks/use-toast';
 
 interface ImportExportProps {
-  bookmarks: Bookmark[];
+  bookmarks: BaseBookmark[];
   onImport: (bookmarks: InsertBookmark[]) => Promise<void>;
 }
 
@@ -31,7 +32,6 @@ export function ImportExport({ bookmarks, onImport }: ImportExportProps) {
       title: bookmark.title,
       description: bookmark.description,
       favicon: bookmark.favicon,
-      tags: bookmark.tags,
       metadata: bookmark.metadata
     }));
 
