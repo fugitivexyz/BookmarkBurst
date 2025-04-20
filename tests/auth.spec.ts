@@ -9,17 +9,24 @@ const signUpLink = 'a[href="/signup"]'; // Example locator
 const signInLink = 'a[href="/login"]'; // Example locator
 
 // Use environment variables or a config file for credentials
-const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL || 'test@example.com';
-const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD || 'password123';
+const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL;
+const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD;
 const NEW_USER_EMAIL = `testuser_${Date.now()}@example.com`;
 
 test.describe('Authentication', () => {
+  // Add a check to ensure credentials are loaded
+  test.beforeAll(() => {
+    if (!TEST_USER_EMAIL || !TEST_USER_PASSWORD) {
+      throw new Error('TEST_USER_EMAIL or TEST_USER_PASSWORD environment variables not set. Check your .env.test file.');
+    }
+  });
+
   test('should allow a user to sign up', async ({ page }) => {
     await page.goto('/'); // Adjust if signup is not on the homepage
     // await page.locator(signUpLink).click(); // Uncomment if needed
 
     await page.locator(emailInput).fill(NEW_USER_EMAIL);
-    await page.locator(passwordInput).fill(TEST_USER_PASSWORD);
+    await page.locator(passwordInput).fill(TEST_USER_PASSWORD!);
     await page.locator(submitButton).click();
 
     // TODO: Add assertion for successful signup
@@ -33,8 +40,8 @@ test.describe('Authentication', () => {
     await page.goto('/'); // Adjust if login is not on the homepage
     // await page.locator(signInLink).click(); // Uncomment if needed
 
-    await page.locator(emailInput).fill(TEST_USER_EMAIL);
-    await page.locator(passwordInput).fill(TEST_USER_PASSWORD);
+    await page.locator(emailInput).fill(TEST_USER_EMAIL!);
+    await page.locator(passwordInput).fill(TEST_USER_PASSWORD!);
     await page.locator(submitButton).click();
 
     // TODO: Add assertion for successful signin
@@ -46,8 +53,8 @@ test.describe('Authentication', () => {
   test('should allow a logged-in user to sign out', async ({ page }) => {
     // Sign in first (adapt from the sign-in test)
     await page.goto('/');
-    await page.locator(emailInput).fill(TEST_USER_EMAIL);
-    await page.locator(passwordInput).fill(TEST_USER_PASSWORD);
+    await page.locator(emailInput).fill(TEST_USER_EMAIL!);
+    await page.locator(passwordInput).fill(TEST_USER_PASSWORD!);
     await page.locator(submitButton).click();
     await expect(page.locator(signOutButton)).toBeVisible(); // Ensure sign-in was successful
 
@@ -65,7 +72,7 @@ test.describe('Authentication', () => {
     await page.goto('/');
     // await page.locator(signInLink).click();
 
-    await page.locator(emailInput).fill(TEST_USER_EMAIL);
+    await page.locator(emailInput).fill(TEST_USER_EMAIL!);
     await page.locator(passwordInput).fill('wrongpassword');
     await page.locator(submitButton).click();
 
