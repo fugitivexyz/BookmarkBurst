@@ -18,6 +18,7 @@ coverage
 .env.production.local
 .env*.local
 .wrangler
+.env.test
 
 # Sensitive configuration files
 extension/lib/config.ts
